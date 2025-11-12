@@ -1,141 +1,93 @@
-這是一個基於 Python 的全方位自動化測試框架，旨在為 Web 應用程式提供高效、可擴展的端到端 (E2E) UI 測試和 API 測試解決方案。
+# pypl
 
-## ✨ 功能特色
 
-- **整合測試框架**: 使用 `pytest` 作為核心測試執行器，提供靈活的測試組織和強大的斷言能力。
-- **現代化 UI 測試**: 採用 `Playwright` 進行瀏覽器自動化，支援所有現代瀏覽器，並以頁面物件模型 (Page Object Model) 設計模式來提高程式碼的可維護性。
-- **分層 API 測試**: 透過 `requests` 函式庫，並將 API 請求封裝在獨立的服務層中，使 API 測試更清晰、更易於管理。
-- **動態環境設定**: 支援多環境、多站點的測試設定，可透過命令列參數 (`--env`, `--site`) 輕鬆切換，無需修改程式碼。
-- **精美的測試報告**: 整合 `Allure Report`，產生內容豐富、互動性強的 HTML 測試報告，方便追蹤測試結果與分析失敗原因。
-- **容器化支援**: 提供 `Dockerfile`，讓測試環境的建置與部署標準化、簡單化。
 
-## 🛠️ 技術棧
+## Getting started
 
-- **核心框架**: pytest
-- **UI 自動化**: playwright-pytest
-- **API 請求**: requests
-- **測試報告**: allure-pytest
-- **設定管理**: configparser
+To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
-## 📂 專案結構
+Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
+## Add your files
+
+- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
+- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
 
 ```
-.
-├── env/                  # 環境設定檔目錄
-├── src/                  # 測試框架源碼
-│   ├── apicheck/         # API 測試相關的客戶端與管理器
-│   ├── pages/            # UI 測試的頁面物件 (Page Objects)
-│   └── services/         # API 測試的服務層封裝
-├── tests/                # 測試案例目錄
-│   ├── apicheck/         # API 測試案例
-│   └── new20/            # new20 站點的 UI 測試案例
-├── conftest.py           # Pytest 的主要設定檔 (定義命令列選項)
-├── tests/conftest.py     # 核心 fixture 設定 (環境載入、瀏覽器啟動、自動登入)
-├── requirements.txt      # Python 依賴套件列表
-├── pytest.ini            # Pytest 設定檔 (markers, default options)
-└── Dockerfile            # Docker 容器設定檔
+cd existing_repo
+git remote add origin http://s-gitlab.sp168.cc/test-auto/pypl.git
+git branch -M main
+git push -uf origin main
 ```
 
-## 🚀 快速開始
+## Integrate with your tools
 
-### 環境準備
+- [ ] [Set up project integrations](http://s-gitlab.sp168.cc/test-auto/pypl/-/settings/integrations)
 
-- Python 3.8+
-- Git
+## Collaborate with your team
 
-### 安裝步驟
+- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
+- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
+- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
+- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
+- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
 
-1.  **複製專案**
-    ```bash
-    git clone <your-repository-url>
-    cd <project-directory>
-    ```
+## Test and Deploy
 
-2.  **建立並啟用虛擬環境** (建議)
-    ```bash
-    # Windows
-    python -m venv .venv
-    .venv\Scripts\activate
+Use the built-in continuous integration in GitLab.
 
-    # macOS / Linux
-    python3 -m venv .venv
-    source .venv/bin/activate
-    ```
+- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
+- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
+- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
+- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
+- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
 
-3.  **安裝依賴套件**
-    ```bash
-    pip install -r requirements.txt
-    ```
+***
 
-4.  **安裝 Playwright 瀏覽器驅動**
-    ```bash
-    playwright install
-    ```
+# Editing this README
 
-## ⚙️ 環境設定
+When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
-本框架的設定檔位於 `env/` 目錄下。您可以透過 `pytest` 命令列的 `--env` 和 `--site` 參數來指定要載入的設定。
+## Suggestions for a good README
 
-- `--env`: 指定環境，例如 `dev`, `uat`。
-- `--site`: 指定站點，例如 `new20`, `spg`。
+Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
 
-## ▶️ 執行測試
+## Name
+Choose a self-explaining name for your project.
 
-請在專案根目錄下執行以下命令：
+## Description
+Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
 
-- **執行所有測試**
-  ```bash
-  pytest
-  ```
+## Badges
+On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
 
-- **僅執行 UI 測試** (標記為 `e2e`)
-  ```bash
-  pytest -m e2e
-  ```
+## Visuals
+Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
 
-- **僅執行 API 測試** (標記為 `apicheck`)
-  ```bash
-  pytest -m apicheck
-  ```
+## Installation
+Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 
-- **指定環境和站點執行**
-  ```bash
-  # 執行 UAT 環境的 spg 站點測試
-  pytest --env=uat --site=spg
-  ```
+## Usage
+Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-- **搭配 Allure 報告執行**
-  ```bash
-  pytest --alluredir=allure-results
-  ```
+## Support
+Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
 
-## 📊 產生報告
+## Roadmap
+If you have ideas for releases in the future, it is a good idea to list them in the README.
 
-測試執行完畢後，若有使用 `--alluredir` 參數，可使用 Allure commandline 來啟動一個 Web 服務以查看報告。
+## Contributing
+State if you are open to contributions and what your requirements are for accepting them.
 
-1.  **安裝 Allure** (若尚未安裝)
-    請參考 [Allure 官方文件](https://allurereport.org/docs/gettingstarted-installation/) 進行安裝。
+For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
 
-2.  **啟動報告服務**
-    ```bash
-    allure serve allure-results
-    ```
+You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
 
-## 🐳 Docker 部署
+## Authors and acknowledgment
+Show your appreciation to those who have contributed to the project.
 
-您也可以使用 Docker 來執行測試，以確保環境的一致性。
+## License
+For open source projects, say how it is licensed.
 
-1.  **建置 Docker Image**
-    ```bash
-    docker build -t my-test-framework .
-    ```
-
-2.  **執行測試**
-    ```bash
-    # 執行預設測試
-    docker run --rm my-test-framework
-
-    # 傳遞 pytest 參數 (例如，僅執行 API 測試)
-    docker run --rm my-test-framework pytest -m apicheck
-    ```
-    
+## Project status
+If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
