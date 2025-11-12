@@ -18,8 +18,8 @@ pip-delete-this-directory.txt
 *.json
 
 pypackages__/
-.venv
-.idea
+.venv/
+.idea/
 env/
 
 videos/
