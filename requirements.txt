@@ -1,0 +1,13 @@
+requests
+allure-pytest
+pytest
+playwright
+pytest-playwright
+configparser
+importlib
+datetime
+os
+pytest-html
+allure-pytest
+pytest-html
+pytest-ordering

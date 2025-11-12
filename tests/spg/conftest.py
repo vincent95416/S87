@@ -6,7 +6,7 @@ from src.pages.spg.lobby_page import LobbyPage
 @pytest.fixture(scope="session")
 def e2e_logged_in_page(page: Page, config):
     """
-    這個 fixture 名稱與根目錄的保持一致，pytest 會優先使用這個（就近原則）
+    spg 專用登入流程：透過 API 取得 RedirectUrl
     """
     site = config.get('DEFAULT', 'site')
 
@@ -14,8 +14,6 @@ def e2e_logged_in_page(page: Page, config):
         pytest.skip(f"This fixture is only for bsite, current site: {site}")
 
     base_url = config.get(site, 'base_url')
-    username = config.get(site, 'username')
-    password = config.get(site, 'password')
 
     url = f'https://ssapi.{base_url}/api/Sport'
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -44,11 +42,7 @@ def e2e_logged_in_page(page: Page, config):
     except (KeyError, AssertionError) as e:
         pytest.fail(f"回應格式錯誤或驗證失敗: {e}")
 
-
 @pytest.fixture(scope="session")
 def e2e_auth_token(e2e_logged_in_page: LobbyPage):
-    """
-    spg 專用：取得 Session Storage 中的 token
-    """
     token = e2e_logged_in_page.get_auth_token()
     return token

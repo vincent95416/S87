@@ -5,17 +5,32 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3787cbd3-6b22-4b5a-aaa8-894f420b8dc4" name="Changes" comment="add env">
-      <change afterPath="$PROJECT_DIR$/env/dev.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/env/uat.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/spg/conftest.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/spg/pages/base_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/spg/pages/lobby_page.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/spg/tests/test_01_lobby.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/superTesting.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/superTesting.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/new20/pages/base_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/new20/pages/base_page.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/new20/tests/test_01_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/new20/tests/test_01_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/new20/tests/test_02_lobby.py" beforeDir="false" afterPath="$PROJECT_DIR$/new20/tests/test_02_lobby.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/env/dev.ini" beforeDir="false" afterPath="$PROJECT_DIR$/env/dev.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/env/uat.ini" beforeDir="false" afterPath="$PROJECT_DIR$/env/uat.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/project.md" beforeDir="false" afterPath="$PROJECT_DIR$/project.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pytest.ini" beforeDir="false" afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apicheck/api_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/apicheck/api_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/apicheck/api_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/apicheck/api_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/base_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/base_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/new20/base_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/new20/base_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/new20/betting_record_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/new20/betting_record_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/new20/lobby_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/new20/lobby_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/new20/login_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/new20/login_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/spg/base_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/spg/base_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pages/spg/lobby_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/pages/spg/lobby_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/apicheck/test_admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/apicheck/test_admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/new20/test_lobby.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/new20/test_lobby.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/new20/test_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/new20/test_login.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/spg/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/spg/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/spg/test_lobby.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/spg/test_lobby.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,9 +67,9 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "feature/ss",
-    "last_opened_file_path": "C:/Users/user/PycharmProjects/E2E",
-    "settings.editor.selected.configurable": "vcs.Git"
+    "git-widget-placeholder": "develop",
+    "last_opened_file_path": "C:/Users/user/PycharmProjects/superTesting",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   },
   "keyToStringList": {
     "ChangesTree.GroupingKeys": [
@@ -68,16 +83,16 @@
       <recent name="C:\Users\user\PycharmProjects\E2E" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\user\PycharmProjects\E2E\tests\spg" />
+      <recent name="C:\Users\user\PycharmProjects\E2E\tests\apicheck" />
       <recent name="C:\Users\user\PycharmProjects\E2E" />
       <recent name="C:\Users\user\PycharmProjects\E2E\new20" />
       <recent name="C:\Users\user\PycharmProjects\E2E\spg" />
-      <recent name="C:\Users\user\PycharmProjects\E2E\spg\pages" />
-      <recent name="C:\Users\user\PycharmProjects\E2E\spg\tests" />
     </key>
   </component>
   <component name="RunManager" selected="Python.conftest">
     <configuration name="0827" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="E2E" />
+      <module name="superTesting" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -99,7 +114,7 @@
       <method v="2" />
     </configuration>
     <configuration name="0902register_event" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="E2E" />
+      <module name="superTesting" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -121,7 +136,7 @@
       <method v="2" />
     </configuration>
     <configuration name="conftest" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="E2E" />
+      <module name="superTesting" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -158,7 +173,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-1f77c24022e5-d902c0275401-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-252.26830.99" />
+        <option value="bundled-python-sdk-f69e5c277ee4-cbfc7b97e6b2-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-252.27397.106" />
       </set>
     </attachedChunks>
   </component>
@@ -195,5 +210,15 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
     <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/new20/pages/lobby_page.py</url>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

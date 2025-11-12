@@ -1,28 +1,44 @@
-project/
-├── conftest.py                     # 全域 fixtures & pytest hooks
-├── pytest.ini                      # pytest 配置檔
-├── env/                         # 網站與環境組態檔
-│   ├── dev.ini
-│   └── prod.ini
+E2E/
+├── 📄 conftest.py                          # Pytest 全域配置 (註冊 --env, --site 選項)
+├── 📄 pytest.ini                           # Pytest 配置檔
+├── 📄 PROJECT.md                           
+├── 📄 requirements.txt                     # Python 套件依賴
 │
-├── tests/
-│   ├── site_a/                     # A 網站的測試用例
-│   │   ├── test_login.py
-│   │   └── conftest.py             # A 網站專屬的 fixtures
-│   │
-│   ├── site_b/                     # B 網站的測試用例
-│   │   ├── test_checkout.py
-│   │   └── conftest.py             # B 網站專屬的 fixtures
-│   │
-│   └── __init__.py
+├── 📂 env/                                 # 環境配置檔
+│   ├── 📄 uat.ini                         # UAT 環境設定
+│   ├── 📄 prod.ini                        # Production 環境設定
+│   └── 📄 dev.ini                         # Dev 環境設定
 │
-├── pages/
-│   ├── base_page.py
-│   ├── site_a_login_page.py        # 專屬 A 網站的頁面物件
-│   ├── site_b_checkout_page.py     # 專屬 B 網站的頁面物件
-│   └── ...
-│
-└── utils/                          # 讀取組態檔的工具 (尚未開發)
-    ├── helpers.py
-    ├── config_reader.py
-    └── ...
+└── 📂 src/                                 # 原始碼目錄
+    │
+    ├── 📂 tests/                           # 測試目錄
+    │   ├── 📄 conftest.py                 # 測試層級 Fixtures
+    │   │
+    │   ├── 📂 new20/                      # new20 站點測試
+    │   │   ├── 📄 test_login.py
+    │   │   ├── 📄 test_lobby.py
+    │   │   └── 📄 test_betting.py
+    │   │
+    │   └── 📂 spg/                        # spg 站點測試
+    │       ├── 📄 conftest.py             # spg 專用 Fixtures (覆寫 e2e_logged_in_page)
+    │       ├── 📄 test_lobby.py
+    │       └── 📄 test_betting.py
+    │
+    ├── 📂 pages/                           # Page Object Models (POM)
+    │   ├── 📄 base_page.py                # 共用基礎 BasePage 類別
+    │   │
+    │   ├── 📂 new20/                      # new20 站點 Pages
+    │   │   ├── 📄 __init__.py
+    │   │   ├── 📄 base_page.py            # new20 專用 BasePage (繼承共用 BasePage)
+    │   │   ├── 📄 login_page.py           # 登入頁面
+    │   │   ├── 📄 lobby_page.py           # 大廳頁面
+    │   │   └── 📄 betting_record_page.py  # 投注記錄頁面
+    │   │
+    │   └── 📂 spg/                        # spg 站點 Pages
+    │       ├── 📄 __init__.py
+    │       ├── 📄 base_page.py            # spg 專用 BasePage (繼承共用 BasePage)
+    │       └── 📄 lobby_page.py           # 大廳頁面
+    │
+    └── 📂 apicheck/                        # API 測試模組
+        ├── 📄 api_client.py               # API 客戶端基礎類別
+        └── 📄 api_manager.py              # API 管理器 (認證、請求)
