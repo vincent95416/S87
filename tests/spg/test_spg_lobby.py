@@ -1,8 +1,10 @@
 from time import sleep
 import allure
+import pytest
 import requests
-from spg.pages.lobby_page import LobbyPage
+from src.pages.spg.lobby_page import LobbyPage
 
+@pytest.mark.e2e
 @allure.step("測試大廳的賠率顯示")
 def test_check_odd(logged_page: LobbyPage, auth_token: str, config):
     logged_page.wait_for_load_state('domcontentloaded')

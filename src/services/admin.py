@@ -14,12 +14,12 @@ class AdminService(BaseService):
     def get_history(self, cat_id, game_type):
         url = f"{self.endpoint}/api/Trader/queryCommHis"
         payload = {
-          "pageSize": 1,
-          "ADate": Config.Testdata.FORMATTED_DATE,
-          "CatID": cat_id,
-          "GameType": game_type,
-          "Idx": 0,
-          "Sort": 0
+            "pageSize": 1,
+            "ADate": Config.Testdata.FORMATTED_DATE,
+            "CatID": cat_id,
+            "GameType": game_type,
+            "Idx": 0,
+            "Sort": 0
         }
         return self.client.post(url, json=payload)
 
@@ -37,4 +37,14 @@ class AdminService(BaseService):
         payload = {"AL":"","SiteID":-1}
         response = self.client.post(url, json=payload)
         return response
+
+    def query_order(self):
+        url = f"{self.endpoint}/api/ballen/ticketquery"
+        payload = {"RptDate":"SDate","Status":"","finish":"",
+            "DateS":Config.Testdata.FORMATTED_DATE+" 00:00","DateE":Config.Testdata.FORMATTED_DATE+" 23:59",
+            "SiteID":-1,"Member":"","BetNo":"","EvtID":"","Span":1,"betIP":"","ballType":"-1","wagerType":"-1","RowNum":0
+        }
+        response = self.client.post(url, json=payload)
+        return response
+
 

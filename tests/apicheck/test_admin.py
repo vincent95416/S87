@@ -13,7 +13,7 @@ def test_menu(api_manager):
 @pytest.mark.apicheck
 @pytest.mark.parametrize("cat_id, game_type", all_history_games)
 def test_history_games(api_manager, cat_id, game_type):
-    response = api_manager.admin.get_games(cat_id, game_type)
+    response = api_manager.admin.get_history(cat_id, game_type)
     assert response.status_code == 200
 
 @pytest.mark.apicheck
@@ -21,3 +21,14 @@ def test_history_games(api_manager, cat_id, game_type):
 def test_games(api_manager, cat_id, game_type):
     response = api_manager.admin.get_games(cat_id, game_type)
     assert response.status_code == 200
+
+@pytest.mark.apicheck
+def test_reports(api_manager):
+    response = api_manager.admin.get_report()
+    assert response.status_code == 200
+
+@pytest.mark.apicheck
+def test_orders(api_manager):
+    response = api_manager.admin.query_order()
+    assert response.status_code == 200
+

@@ -1,6 +1,7 @@
 import json
 from time import sleep
 import allure
+import pytest
 import requests
 from playwright.sync_api import Page
 from src.pages.new20.lobby_page import LobbyPage
@@ -42,6 +43,7 @@ def _set_principal_display(base_url: str, username: str, auth_token: str, includ
     except requests.RequestException as e:
         return False
 
+@pytest.mark.e2e
 @allure.step("測試大廳的賠率顯示")
 def test_check_odd(e2e_main_page: Page, e2e_auth_token: str, game, config, request):
     game = request.config.getoption("--game")
@@ -62,6 +64,7 @@ def test_check_odd(e2e_main_page: Page, e2e_auth_token: str, game, config, reque
     after_odd = lobby_page.extract_odd()
     assert abs(after_odd - (before_odd - 1)) < 0.0001
 
+@pytest.mark.e2e
 def test_betting(e2e_main_page: Page, config):
     lobby_page = LobbyPage(e2e_main_page, config)
     betting_odd, betting_payout = lobby_page.bet()

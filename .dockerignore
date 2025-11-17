@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+lib/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test artifacts
+.pytest_cache/
+*.html
+*.log
+*.json
+allure-results/
+allure-report/
+
+# Virtual environments
+.venv/
+pypackages__/
+
+# IDE
+.idea/
+.vscode/
+
+# Reports and outputs
+videos/
+reports/
+output/
+screenshots/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.gitlab-ci.yml
+
+# Documentation
+*.md
+README.md
+docs/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
