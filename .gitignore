@@ -13,7 +13,6 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 .pytest_cache/
-*.html
 *.log
 *.json
 

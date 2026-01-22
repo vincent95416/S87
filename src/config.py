@@ -1,12 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Config:
 
     class Testdata:
         ACQSITE = ["0", "TX", "KU", "CTX", "PIN", "SB", "PM", "DB_ESPORT", "BET365", "188BET", "1XBET"]
 
-        now = datetime.now()
-        FORMATTED_DATE = now.strftime("%Y-%m-%d")
+        _now = datetime.now()
+        _tomorrow = _now + timedelta(days=1)
+        FORMATTED_DATE = _now.strftime("%Y-%m-%d")
+        TOMORROW = _tomorrow.strftime("%Y-%m-%d")
 
         HIS_GTYPE = [-1, -2, -3, 0, 1, 2, 4, 8, 13, 14, 31, 35] #搶首/尾 單隊總得分 波膽 早餐 單式 滾球 37局 安打總數 優先得分 單節(網) 節(籃球) 下半場
         GTYPE = [-3, -4, -5, -6, -7, 0, 1, 2, 6] #波膽 波膽半 半全場 入球 入球半 早餐 單式 滾球 冠軍

@@ -1,16 +1,59 @@
 import pytest
-import datetime
 import os
 import configparser
 import importlib
-from playwright.sync_api import Page, sync_playwright
+from datetime import datetime
+from playwright.sync_api import Page, BrowserContext, sync_playwright
 
 from src.pages.base_page import BasePage
 from src.apicheck.api_client import APIClient
 from src.apicheck.api_manager import APIManager
 
 # ====================================================================
-# A. 核心配置 Fixtures (superTesting 和 API 共用)
+# Pytest Hook - 捕捉及追蹤測試結果
+# ====================================================================
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def test_report(item, call):
+    """
+    讓 fixture 可以知道測試是否失敗
+    """
+    outcome = yield
+    rep = outcome.get_result()      #把item.rep_call測試本體的結果附加到request.node上，讓fixture讀取
+    setattr(item, f"rep_{rep.when}", rep)
+
+@pytest.fixture(scope="function", autouse=True)
+def trace_handler(request, context, trace_session_dir):
+    """
+    自動處理每個測試的 trace 錄製（autouse=True 表示自動應用到所有測試）
+    """
+    # 測試開始前：啟動 trace chunk
+    context.tracing.start_chunk()
+
+    yield
+    # 測試結束後：檢查是否失敗
+    test_failed = (
+            (hasattr(request.node, 'rep_setup') and request.node.rep_setup.failed) or
+            (hasattr(request.node, 'rep_call') and request.node.rep_call.failed) or
+            (hasattr(request.node, 'rep_teardown') and request.node.rep_teardown.failed)
+    )
+
+    if test_failed:
+        os.makedirs(trace_session_dir, exist_ok=True)
+        test_name = request.node.name
+        trace_path = os.path.join(trace_session_dir, f"{test_name}.zip")
+        context.tracing.stop_chunk(path=trace_path)
+    else:
+        context.tracing.stop_chunk()
+
+@pytest.fixture(scope="session")
+def trace_session_dir():
+    """測試失敗時才建立的traces資料夾"""
+    session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    trace_dir = os.path.join("traces", session_time)
+    return trace_dir
+
+# ====================================================================
+# A. 核心配置 Fixtures (e2e 和 API 共用)
 # ====================================================================
 
 @pytest.fixture(scope="session")
@@ -37,46 +80,63 @@ def config(request):
     return config_parser
 
 # ====================================================================
-# B. superTesting 專用 Fixtures (Playwright)
+# B. e2e 專用 Fixtures
 # ====================================================================
 
 @pytest.fixture(scope="session")
-def page():
+def context():
     """
-    Playwright Page Fixture：設定 viewport, slow_mo, 視訊錄製等。
-    這個 Fixture 是 superTesting 測試的核心。
+    Browser Context，保持登入狀態，設定 viewport, slow_mo, 視訊錄製等。
     """
     with sync_playwright() as p:
-        video_dir = "videos"
-        os.makedirs(video_dir, exist_ok=True)
-
         browser = p.chromium.launch(headless=False, slow_mo=100)
         context = browser.new_context(
             viewport={"width": 2560, "height": 1440},
-            record_video_dir=video_dir,
-            record_video_size={"width": 2560, "height": 1440}
         )
-        page = context.new_page()
-        page.set_default_timeout(5000)
+        # 開始 trace 錄製
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
-        yield page
+        yield context
+        # 停止並保存 trace
+        context.tracing.stop()
+        context.close()
+        browser.close()
 
-        # 清理和錄影檔重新命名
-        if page.video:
-            video_path = page.video.path()
-            context.close()
-            browser.close()
+@pytest.fixture(scope="session")
+def page(context: BrowserContext, request, trace_session_dir):
+    page = context.new_page()
+    page.set_default_timeout(5000)
 
-            now = datetime.datetime.now()
-            new_filename = now.strftime("%Y%m%d_%H%M%S") + ".webm"
-
-            if os.path.exists(video_path):
-                new_path = os.path.join(video_dir, new_filename)
-                os.rename(video_path, new_path)
-
+    context.tracing.start_chunk()   #每個測試用start_chunk保存為獨立片段
+    yield page
+    # # 檢查測試是否失敗（檢查所有階段）
+    # failed = False
+    #
+    # # 檢查 setup 階段
+    # if hasattr(request.node, 'rep_setup') and request.node.rep_setup.failed:
+    #     failed = True
+    # # 檢查 call 階段（測試本體）
+    # if hasattr(request.node, 'rep_call') and request.node.rep_call.failed:
+    #     failed = True
+    # # 檢查 teardown 階段
+    # if hasattr(request.node, 'rep_teardown') and request.node.rep_teardown.failed:
+    #     failed = True
+    #
+    # if failed:
+    #     # 只有在測試失敗時才建立 session 資料夾
+    #     os.makedirs(trace_session_dir, exist_ok=True)
+    #     test_name = request.node.name
+    #     trace_path = os.path.join(trace_session_dir, f"{test_name}.zip")
+    #     context.tracing.stop_chunk(path=trace_path)
+    # else:
+    #     context.tracing.stop_chunk()
+    page.close()
 
 @pytest.fixture(scope="session")
 def e2e_logged_in_page(page: Page, config):
+    """
+    依賴context fixture，執行一次性登入
+    """
     site = config.get('DEFAULT', 'site')
 
     if site == 'spg':
@@ -97,16 +157,13 @@ def e2e_logged_in_page(page: Page, config):
     login_page.verify_login_success()
     yield login_page
 
-
 @pytest.fixture(scope="session")
 def e2e_auth_token(e2e_logged_in_page: "BasePage"):
-    token = e2e_logged_in_page.get_auth_token()
-    return token
+    return e2e_logged_in_page.get_auth_token()
 
 @pytest.fixture(scope="session")
-def e2e_main_page(e2e_logged_in_page):
+def e2e_main_page(e2e_logged_in_page, page):
     return e2e_logged_in_page.page
-
 
 # ====================================================================
 # C. API 專用 Fixtures
@@ -119,10 +176,9 @@ def api_client(config):
     所有環境參數都從 config Fixture (即 .ini 檔案) 中讀取。
     """
     site = config.get('DEFAULT', 'site')
-
     base_url = config.get(site, "base_url")
-    api_username = config.get(site, 'test_username')
-    api_password = config.get(site, 'test_password')
+    api_username = config.get(site, 'username')
+    api_password = config.get(site, 'password')
 
     # 實例化 APIClient
     return APIClient(base_url, api_username, api_password)

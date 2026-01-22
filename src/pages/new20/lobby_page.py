@@ -14,7 +14,6 @@ class LobbyPage(BasePage):
         def handle_new_page(future: Future):
             def on_page(new_page):
                 if not future.done():
-                    print(f"✅ 擷取到新頁面: {new_page.url}")
                     future.set_result(new_page)
 
             return on_page
@@ -28,13 +27,12 @@ class LobbyPage(BasePage):
             self.page.get_by_text("投注記錄").click()
             record_page = future.result(timeout=10)
             record_page.wait_for_load_state("networkidle", timeout=5000)
-
-            betting_record_page = BettingRecordPage(record_page)
-        except TimeoutError:
-            raise Exception("事件處理器超時")
+            betting_record_page = BettingRecordPage(record_page, self.config)
+            return betting_record_page
+        except Exception as e:
+            raise Exception(f"無法導航至投注記錄頁面: {str(e)}")
         finally:
             self.page.context.remove_listener("page", on_page_handler)
-        return betting_record_page
 
     @allure.step("切換遊戲菜單")
     def select_game(self, game_name: str) -> None:
@@ -54,7 +52,7 @@ class LobbyPage(BasePage):
     @allure.step("切換為不含本金")
     def switch_principal(self) -> None:
         self.page.locator("div.dropDown.el-dropdown").first.click()
-        self.page.get_by_text("不含本金", exact=True).click()
+        self.page.locator('li:has-text("不含本金")').click()
 
     @allure.step("下注第一個注項")
     def bet(self) -> tuple[str, str]:
@@ -63,7 +61,7 @@ class LobbyPage(BasePage):
         self.page.locator('.submitBtn:has-text(" 確認下注 ")').dblclick()
         self.page.locator('div.chipsBar').wait_for(state='hidden', timeout=1000)
         self.page.locator('.submitBtn:has-text(" 確認下注 ")').click()
-        self.page.get_by_text(" 交易成功 ").wait_for(state='visible', timeout=10000)
+        self.page.get_by_text("交易成功", exact=False).wait_for(state='visible', timeout=15000)
         betting_odd = self.page.locator('div.playBetOdd').inner_text().strip()
         betting_payout = self.page.locator('div.infoItemVal').nth(1).inner_text().strip()
         return betting_odd, betting_payout

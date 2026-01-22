@@ -1,4 +1,5 @@
 from playwright.sync_api import Page
+from typing import Dict, Any, Optional, List
 
 class BasePage:
     def __init__(self, page: Page, config=None):
@@ -12,8 +13,9 @@ class BasePage:
     def wait_for_load_state(self, state: str = "networkidle") -> None:
         self.page.wait_for_load_state(state)
 
-    def is_element_visible(self, selector: str) -> bool:
-        return self.page.locator(selector).is_visible()
+    def is_element_visible(self, selector: str):
+        return self.page.locator(selector).wait_for(state='visible', timeout=5000)
+        #return self.page.locator(selector).is_visible()
 
     def reload(self) -> None:
         self.page.reload(wait_until="domcontentloaded")
