@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 角色一：長期運行的控制台 (Web)
   webservice:
@@ -9,8 +7,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./reports:/app/reports     # 關鍵：宿主機與容器共享同一個報告抽屜
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+      - /home/ssport/test_output:/app/reports     # 關鍵：宿主機與容器共享同一個報告抽屜
+    command: python -m uvicorn webservice.main:app --host 0.0.0.0 --port 8000
     restart: always                # 確保 Web 服務掛了會自動重啟
 
   # 角色二：臨時的測試任務 (Tester)
@@ -18,8 +16,8 @@ services:
     image: test-image:latest  # 直接用上面 build 好的，不用重新 build
     user: "1000:1000"
     volumes:
-      - ./reports:/app/reports     # 寫入同一個抽屜
+      - /home/ssport/test_output:/app/reports     # 寫入同一個抽屜
     # 這裡放你原本跑測試的完整指令
-    command: pytest -m apicheck --html=reports/html_report.html --self-contained-html
+    command: pytest -m apicheck --html=reports/cicd_report.html --self-contained-html
     profiles:
       - "task"                     # 標記為任務模式，平時 docker-compose up 不會誤觸它

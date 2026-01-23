@@ -39,7 +39,7 @@ app.add_middleware(
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
-    html_obj = BASE_DIR / "dashboard.html"  # 根據你的專案結構調整路徑
+    html_obj = BASE_DIR / "dashboard.html"
     with open(html_obj, "r", encoding="utf-8") as f:
         return f.read()
 

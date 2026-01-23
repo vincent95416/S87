@@ -57,7 +57,7 @@ class LobbyPage(BasePage):
     @allure.step("下注第一個注項")
     def bet(self) -> tuple[str, str]:
         self.page.locator('.Odd').first.click(force=True)
-        self.page.locator('div.cardHeaderRow').wait_for(state='visible', timeout=1000)
+        self.page.locator('div.cardHeaderRow').wait_for(state='visible', timeout=3000)
         self.page.locator('.submitBtn:has-text(" 確認下注 ")').dblclick()
         self.page.locator('div.chipsBar').wait_for(state='hidden', timeout=1000)
         self.page.locator('.submitBtn:has-text(" 確認下注 ")').click()

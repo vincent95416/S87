@@ -1,93 +1,142 @@
-# pypl
+# E2E 自動化測試框架
 
+基於 Pytest + Playwright 的全方位測試解決方案，支援 UI 自動化、API 驗證，並提供 Web 控制台讓團隊成員輕鬆執行測試、查看報告與 Trace。
 
+## 核心功能
 
-## Getting started
+- **多站點架構**: 支援 new20、spg、ct 等多個測試目標
+- **環境隔離**: dev/uat 環境配置分離，命令列切換
+- **Web 控制台**: 團隊成員可透過瀏覽器觸發測試、查看報告、播放 Trace
+- **失敗追蹤**: 自動錄製失敗測試的 Playwright Trace，直接線上回放
+- **CI/CD 整合**: Docker Compose 支援 GitLab CI 自動化檢測
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 技術棧
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+| 用途 | 技術 |
+|------|------|
+| 測試框架 | Pytest |
+| UI 自動化 | Playwright |
+| API 測試 | Requests |
+| 報告生成 | pytest-html, Allure |
+| Web 服務 | FastAPI + Uvicorn |
+| 容器化 | Docker + Docker Compose |
 
-## Add your files
+## 快速開始
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+### 本地開發
+
+**1. 環境準備**
+```bash
+# 安裝依賴
+pip install -r requirements.txt
+
+# 安裝瀏覽器驅動
+playwright install chromium
+```
+
+**2. 執行測試**
+```bash
+# 指定站點與環境
+pytest --env=dev --site={site}
+
+# 只跑 UI 測試
+pytest -m e2e
+
+# 只跑 API 測試
+pytest -m apicheck
+```
+
+**3. 查看報告**
+```bash
+# HTML 報告
+open reports/html_report.html
+
+# Allure 報告（需先安裝 Allure）
+allure serve reports/allure-results
+```
+
+### Web 控制台部署
+
+**啟動 Web 服務**
+```bash
+# 使用 Docker Compose
+docker-compose up -d webservice
+
+# 瀏覽器訪問
+http://localhost:8000
+```
+
+**功能說明**
+- **觸發測試**: 選擇站點、環境、輸入帳密後執行
+- **查看報告**: HTML 報告即時生成
+- **Trace 回放**: 失敗測試的 Trace 可直接線上播放（無需下載）
+- **執行狀態**: 即時顯示測試是否正在執行
+
+### CI/CD 整合
+
+**GitLab CI 範例**
+```yaml
+test:
+  script:
+    - docker-compose run --rm tester
+  artifacts:
+    paths:
+      - reports/
+    when: always
+```
+
+`tester` 服務設定為 `profiles: ["task"]`，不會在 `docker-compose up` 時自動啟動，只在 CI 流程中手動觸發。
+
+## 環境配置
+
+配置檔位於 `env/` 目錄：
+
+```ini
+# env/uat.ini
+[new20]
+base_url = https://uat.example1.com
+username = test_user
+password = test_pass
+
+[spg]
+base_url = https://uat.example2.com
+username = us
+password = pw
+```
+
+## 常見問題
+
+**Q: Trace 在哪裡？**  
+只有失敗的測試會生成 Trace，位於 `traces/YYYYMMDD_HHMMSS/` 目錄。
+
+**Q: Web 服務顯示「系統忙碌中」？**  
+同一站點同時只能執行一個測試任務，等待當前任務完成即可。
+
+**Q: 如何新增測試站點？**  
+1. 在 `env/*.ini` 新增站點配置
+2. 在 `src/pages/` 建立站點目錄與 Page Objects
+3. 在 `tests/` 建立對應測試案例
+
+**Q: Docker 容器權限問題？**  
+檢查 `docker-compose.yml` 中的 `user: "1000:1000"` 是否與宿主機使用者 UID/GID 一致。
+
+## 目錄結構
 
 ```
-cd existing_repo
-git remote add origin http://s-gitlab.sp168.cc/test-auto/pypl.git
-git branch -M main
-git push -uf origin main
+├── env/              # 環境配置（dev.ini, uat.ini）
+├── src/
+│   ├── pages/        # Page Object Models
+│   ├── apicheck/     # API 測試客戶端
+│   └── services/     # API 服務封裝
+├── tests/            # 測試案例
+├── webservice/       # Web 控制台後端
+├── reports/          # 測試報告輸出
+├── traces/           # 失敗測試 Trace
+└── viewer/           # Playwright Trace Viewer 靜態檔案
 ```
 
-## Integrate with your tools
+更多架構細節與開發指南請參考 [PROJECT.md](PROJECT.md)。
 
-- [ ] [Set up project integrations](http://s-gitlab.sp168.cc/test-auto/pypl/-/settings/integrations)
+## 授權
 
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+內部專案，未授權不得外傳。

@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.57.0-jammy
 
 WORKDIR /app
 
@@ -11,14 +11,10 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+RUN mkdir -p /app/reports && chown -R 1000:1000 /app
 
-RUN mkdir -p /app/reports
-
-ENV PYTHONUNBUFFERED=1
-
-CMD ["pytest", "-m", "apicheck"]
+CMD ["python3"]

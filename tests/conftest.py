@@ -89,7 +89,7 @@ def context():
     Browser Context，保持登入狀態，設定 viewport, slow_mo, 視訊錄製等。
     """
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=100)
+        browser = p.chromium.launch(headless=True, slow_mo=100)
         context = browser.new_context(
             viewport={"width": 2560, "height": 1440},
         )

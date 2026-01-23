@@ -17,11 +17,8 @@ pip-delete-this-directory.txt
 
 # Test artifacts
 .pytest_cache/
-*.html
 *.log
-*.json
 allure-results/
-allure-report/
 
 # Virtual environments
 .venv/
@@ -32,7 +29,6 @@ pypackages__/
 .vscode/
 
 # Reports and outputs
-videos/
 reports/
 output/
 screenshots/
