@@ -4,8 +4,8 @@
 
 ## 核心功能
 
-- **多站點架構**: 支援 new20、spg、ct 等多個測試目標
-- **環境隔離**: dev/uat 環境配置分離，命令列切換
+- **多站點架構**: 支援多個測試目標，高度擴展性
+- **環境隔離**: 環境配置分離
 - **Web 控制台**: 團隊成員可透過瀏覽器觸發測試、查看報告、播放 Trace
 - **失敗追蹤**: 自動錄製失敗測試的 Playwright Trace，直接線上回放
 - **CI/CD 整合**: Docker Compose 支援 GitLab CI 自動化檢測
@@ -93,15 +93,15 @@ test:
 
 ```ini
 # env/uat.ini
-[new20]
+[site1]
 base_url = https://uat.example1.com
-username = test_user
-password = test_pass
+username = username
+password = password
 
-[spg]
+[site2]
 base_url = https://uat.example2.com
-username = us
-password = pw
+username = username
+password = password
 ```
 
 ## 常見問題
@@ -132,11 +132,11 @@ password = pw
 ├── webservice/       # Web 控制台後端
 ├── reports/          # 測試報告輸出
 ├── traces/           # 失敗測試 Trace
-└── viewer/           # Playwright Trace Viewer 靜態檔案
+└── viewer/           # Trace Viewer 靜態檔案
 ```
 
 更多架構細節與開發指南請參考 [PROJECT.md](PROJECT.md)。
 
 ## 授權
 
-內部專案，未授權不得外傳。
+本專案為個人學習與作品展示用途，已移除敏感業務邏輯與公司資訊。

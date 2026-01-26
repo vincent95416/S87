@@ -7,7 +7,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - /home/ssport/test_output:/app/reports     # 關鍵：宿主機與容器共享同一個報告抽屜
+      - /home/ssport/test_output:/app/reports
+      - /home/ssport/test_traces:/app/traces
     command: python -m uvicorn webservice.main:app --host 0.0.0.0 --port 8000
     restart: always                # 確保 Web 服務掛了會自動重啟
 
