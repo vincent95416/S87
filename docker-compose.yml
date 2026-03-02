@@ -3,19 +3,19 @@ services:
   webservice:
     build: .
     image: test-image:latest  # 給這個鏡像一個統一的名字
-    user: "1000:1000"
     ports:
       - "8000:8000"
     volumes:
       - /home/ssport/test_output:/app/reports
       - /home/ssport/test_traces:/app/traces
+      - ./dashboard.html:/app/dashboard.html
+      - ./webservice:/app/webservice
     command: python -m uvicorn webservice.main:app --host 0.0.0.0 --port 8000
     restart: always                # 確保 Web 服務掛了會自動重啟
 
   # 角色二：臨時的測試任務 (Tester)
   tester:
     image: test-image:latest  # 直接用上面 build 好的，不用重新 build
-    user: "1000:1000"
     volumes:
       - /home/ssport/test_output:/app/reports     # 寫入同一個抽屜
     # 這裡放你原本跑測試的完整指令

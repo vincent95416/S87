@@ -91,7 +91,7 @@ def context():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, slow_mo=100)
         context = browser.new_context(
-            viewport={"width": 2560, "height": 1440},
+            #viewport={"width": 2560, "height": 1440}
         )
         # 開始 trace 錄製
         context.tracing.start(screenshots=True, snapshots=True, sources=True)

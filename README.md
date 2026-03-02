@@ -17,8 +17,8 @@
 | 測試框架 | Pytest |
 | UI 自動化 | Playwright |
 | API 測試 | Requests |
-| 報告生成 | pytest-html, Allure |
-| Web 服務 | FastAPI + Uvicorn |
+| 報告生成 | Allure |
+| Web 服務 | FastAPI (StaticFiles 託管報告) |
 | 容器化 | Docker + Docker Compose |
 
 ## 快速開始
@@ -48,11 +48,10 @@ pytest -m apicheck
 
 **3. 查看報告**
 ```bash
-# HTML 報告
-open reports/html_report.html
+Allure 整合報告：直接訪問 http://localhost:8000/allure/
 
-# Allure 報告（需先安裝 Allure）
-allure serve reports/allure-results
+Playwright Trace：直接訪問 http://localhost:8000/traces/ 即可線上回放
+
 ```
 
 ### Web 控制台部署
@@ -68,8 +67,8 @@ http://localhost:8000
 
 **功能說明**
 - **觸發測試**: 選擇站點、環境、輸入帳密後執行
-- **查看報告**: HTML 報告即時生成
-- **Trace 回放**: 失敗測試的 Trace 可直接線上播放（無需下載）
+- **即時報告更新**: 測試執行完畢後，Allure 靜態頁面會自動更新，重新整理網頁即可查看
+- **靜態資源掛載**: 自動將報告頁與回放頁掛載至 Web 服務路徑，實現「測完即看」
 - **執行狀態**: 即時顯示測試是否正在執行
 
 ### CI/CD 整合
@@ -106,8 +105,8 @@ password = password
 
 ## 常見問題
 
-**Q: Trace 在哪裡？**  
-只有失敗的測試會生成 Trace，位於 `traces/YYYYMMDD_HHMMSS/` 目錄。
+**Q: 如何看到最新的 Allure 報告？**  
+系統會自動將結果生成於 allure-results 目錄。只需直接重新整理 http://localhost:8000/allure/ 即可看到最新數據。
 
 **Q: Web 服務顯示「系統忙碌中」？**  
 同一站點同時只能執行一個測試任務，等待當前任務完成即可。
@@ -131,8 +130,7 @@ password = password
 ├── tests/            # 測試案例
 ├── webservice/       # Web 控制台後端
 ├── reports/          # 測試報告輸出
-├── traces/           # 失敗測試 Trace
-└── viewer/           # Trace Viewer 靜態檔案
+└── traces/           # 失敗測試 Trace
 ```
 
 更多架構細節與開發指南請參考 [PROJECT.md](PROJECT.md)。

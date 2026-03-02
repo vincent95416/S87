@@ -21,6 +21,7 @@ class BettingRecordPage(BasePage):
     def extract_record_payout(self):
         return self.page.locator('td.rt_betval').nth(1).inner_text().strip()
 
+    @allure.step("抓取第一筆注單單號")
     def extract_record_ticket(self):
         element = self.page.locator('li:has-text("單號")').first
         element.wait_for(state='visible', timeout=5000)
@@ -28,6 +29,7 @@ class BettingRecordPage(BasePage):
         return text.split(":")[-1].strip()
 
     @staticmethod
+    @allure.step("取得管端驗證")
     def get_agent_session(config: ConfigParser):
         base_url = config.get('ag', 'base_url')
         username = config.get('ag', 'username')
@@ -65,6 +67,7 @@ class BettingRecordPage(BasePage):
             raise Exception(f"回傳異常: {response.text}")
 
     @staticmethod
+    @allure.step("取得控端驗證")
     def get_controller_session(config: ConfigParser):
         base_url = config.get('ct', 'base_url')
         username = config.get('ct', 'username')

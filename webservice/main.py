@@ -25,8 +25,10 @@ latest_test_result = None
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPORTS_DIR = BASE_DIR / "reports"
 TRACE_DIR = BASE_DIR / "traces"
-VIEW_DIR = BASE_DIR / "viewer"
+ALLURE_DIR = REPORTS_DIR / "allure-results"
+ALLURE_REPORT_HTML = REPORTS_DIR / "allure-report-html"
 REPORTS_DIR.mkdir(exist_ok=True)
+ALLURE_REPORT_HTML.mkdir(exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -181,22 +183,16 @@ def get_html_report():
 @app.get("/api/reports/allure")
 def get_allure_report():
     """取得 Allure 報告連結"""
-    allure_dir = REPORTS_DIR / "allure-results"
-    if not allure_dir.exists():
-        raise HTTPException(status_code=404, detail="Allure 報告不存在")
+    if not (ALLURE_REPORT_HTML / "index.html").exists():
+        raise HTTPException(status_code=404, detail="報告尚未生成")
+    return {"url": "/allure/index.html"}
 
-    return {
-        "message": "Allure 報告已生成",
-        "path": str(allure_dir),
-        "hint": "請執行 'allure serve' 查看報告"
-    }
 # 強制讓系統認識 .zip 格式
 mimetypes.add_type('application/zip', '.zip')
 
 app.mount("/static", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 app.mount("/traces", StaticFiles(directory=str(TRACE_DIR)), name="traces")
-app.mount("/viewer", StaticFiles(directory=str(VIEW_DIR), html=True), name="viewer")
-
+app.mount("/allure", StaticFiles(directory=str(ALLURE_REPORT_HTML), html=True), name="allure" )
 
 if __name__ == "__main__":
     import uvicorn

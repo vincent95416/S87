@@ -37,7 +37,7 @@ class LobbyPage(BasePage):
     @allure.step("切換遊戲菜單")
     def select_game(self, game_name: str) -> None:
         self.page.locator(f'.cat-name:has-text("{game_name}")').wait_for(state='visible', timeout=5000)
-        self.page.locator(f'.cat-name:has-text("{game_name}")').click()
+        self.page.locator(f'.cat-name:has-text("{game_name}")').click(force=True)
         target = self.page.locator('.leftArrow')
         expect(target).to_have_text(game_name)
 
@@ -65,3 +65,6 @@ class LobbyPage(BasePage):
         betting_odd = self.page.locator('div.playBetOdd').inner_text().strip()
         betting_payout = self.page.locator('div.infoItemVal').nth(1).inner_text().strip()
         return betting_odd, betting_payout
+
+    def hidden_mask(self) -> None:
+        self.page.locator('.promotion-close').click()

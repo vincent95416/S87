@@ -18,7 +18,7 @@ def _set_principal_display(base_url: str, username: str, auth_token: str, includ
         Returns:
             bool: 是否設定成功
     """
-    headers = {"Content-Type": "application/json", "sssmbid": username, "ssstoken": auth_token}
+    headers = {"Content-Type": "application/json", "sssmbid": username, "ssstoken": auth_token, "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"}
     settings = {
         "includePrincipal": include_principal,
         "tableSort": 0,
@@ -34,7 +34,7 @@ def _set_principal_display(base_url: str, username: str, auth_token: str, includ
     }
     url = f"{base_url}/api/GameInfo/FrontEvn/save"
     payload = {"SetJson": json.dumps(settings, separators=(",", ":"))}
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url=url, headers=headers, json=payload)
     response.raise_for_status()
     try:
         response_json = response.json()
@@ -45,50 +45,57 @@ def _set_principal_display(base_url: str, username: str, auth_token: str, includ
     return True
 
 @pytest.mark.e2e
-@allure.step("測試大廳的賠率顯示")
+@allure.feature("遊戲盤面和賠率檢查")
+@allure.story("切換賠率的顯示、驗證遊戲菜單")
 def test_check_odd(e2e_main_page: Page, e2e_auth_token: str, config, request):
-    game = request.config.getoption("--game")
-    base_url = config.get('new20', 'base_url')
-    username = config.get('new20', 'username')
-    lobby_page = LobbyPage(e2e_main_page, config)
-    lobby_page.wait_for_load_state()
-    _set_principal_display(base_url, username, e2e_auth_token, include_principal=True)
-    lobby_page.reload()
-    # 比較賠率
-    before_odd = lobby_page.extract_odd()
-    lobby_page.switch_principal()
-    after_odd = lobby_page.extract_odd()
-    assert abs(after_odd - (before_odd - 1)) < 0.0001
-    lobby_page.is_element_visible("div.games-menu")
-    lobby_page.select_game(game)
+    with allure.step("發出更改顯示的請求"):
+        game = request.config.getoption("--game")
+        base_url = config.get('new20', 'base_url')
+        username = config.get('new20', 'username')
+        lobby_page = LobbyPage(e2e_main_page, config)
+        lobby_page.wait_for_load_state()
+        _set_principal_display(base_url, username, e2e_auth_token, include_principal=True)
+        lobby_page.reload()
+        lobby_page.hidden_mask()
+    with allure.step("遊戲菜單驗證"):
+        lobby_page.is_element_visible("div.games-menu")
+        lobby_page.select_game('猜冠軍')
+    with allure.step("比較切換前後的賠率顯示"):
+        before_odd = lobby_page.extract_odd()
+        lobby_page.switch_principal()
+        after_odd = lobby_page.extract_odd()
+        assert abs(after_odd - (before_odd - 1)) < 0.0001
 
 @pytest.mark.e2e
+@allure.feature("注單驗證")
+@allure.story("投注後至客戶端注單紀錄、控管端注單查詢")
 def test_betting(e2e_main_page: Page, config):
     lobby_page = LobbyPage(e2e_main_page, config)
-    betting_odd, betting_payout = lobby_page.bet()
-    record_page = lobby_page.navigate_to_betting_records()
-    record_page.wait_for_load_state("networkidle")
-    record_odd = record_page.extract_record_odd()
-    record_payout = record_page.extract_record_payout()
-    assert betting_odd == record_odd, f"bet: {betting_odd}, record: {record_odd}"
-    assert betting_payout == record_payout, f"bet: {betting_payout}, record: {record_payout}"
-
-    ticket_id = record_page.extract_record_ticket()
-    # 管端驗證
-    ag_base_url = config.get('ag', 'base_url')
-    ag_session = BettingRecordPage.get_agent_session(config)
-    ag_payload = {"ticketid": ticket_id}
-    ag_response = ag_session.post(url=f"{ag_base_url}/bill/billTicketQ", data=ag_payload)
-    ag_response_json = ag_response.json()
-    assert ag_response.status_code == 200
-    assert len(ag_response_json['Data']) > 0, "管端注單搜尋的Data List為空"
-    assert str(ag_response_json['Data'][0]['TicketID']) == ticket_id, f"注單 :{ticket_id}無法在管端查詢到"
-    # 控端驗證
-    ct_base_url = config.get('ct', 'base_url')
-    ct_session = BettingRecordPage.get_controller_session(config)
-    ct_payload = {"RptDate":"TDate","Status":"Y","finish":"0","DateS":Config.Testdata.FORMATTED_DATE,"DateE":Config.Testdata.TOMORROW,"SiteID":-1,"BetNo":ticket_id,"Span":1}
-    ct_response = ct_session.post(url=f"{ct_base_url}/api/ballen/ticketquery", json=ct_payload)
-    ct_response_json = ct_response.json()
-    assert ct_response.status_code == 200
-    assert len(ct_response_json['Data']) > 0, "控端注單搜尋的Data List為空"
-    assert str(ct_response_json['Data'][0]['ticketid']) == ticket_id, f"注單 :{ticket_id}無法在控端查詢到"
+    with allure.step("在大廳投注"):
+        betting_odd, betting_payout = lobby_page.bet()
+    with allure.step("驗證客戶端注單紀錄"):
+        record_page = lobby_page.navigate_to_betting_records()
+        record_page.wait_for_load_state("networkidle")
+        record_odd = record_page.extract_record_odd()
+        record_payout = record_page.extract_record_payout()
+        assert betting_odd == record_odd, f"bet: {betting_odd}, record: {record_odd}"
+        assert betting_payout == record_payout, f"bet: {betting_payout}, record: {record_payout}"
+        ticket_id = record_page.extract_record_ticket()
+    with allure.step("驗證管端注單查詢"):
+        ag_base_url = config.get('ag', 'base_url')
+        ag_session = BettingRecordPage.get_agent_session(config)
+        ag_payload = {"ticketid": ticket_id}
+        ag_response = ag_session.post(url=f"{ag_base_url}/bill/billTicketQ", data=ag_payload)
+        ag_response_json = ag_response.json()
+        assert ag_response.status_code == 200
+        assert len(ag_response_json['Data']) > 0, "管端注單搜尋的Data List為空"
+        assert str(ag_response_json['Data'][0]['TicketID']) == ticket_id, f"注單 :{ticket_id}無法在管端查詢到"
+    with allure.step("驗證控端注單查詢"):
+        ct_base_url = config.get('ct', 'base_url')
+        ct_session = BettingRecordPage.get_controller_session(config)
+        ct_payload = {"RptDate":"TDate","Status":"Y","finish":"0","DateS":Config.Testdata.FORMATTED_DATE,"DateE":Config.Testdata.TOMORROW,"SiteID":-1,"BetNo":ticket_id,"Span":1}
+        ct_response = ct_session.post(url=f"{ct_base_url}/api/ballen/ticketquery", json=ct_payload)
+        ct_response_json = ct_response.json()
+        assert ct_response.status_code == 200
+        assert len(ct_response_json['Data']) > 0, "控端注單搜尋的Data List為空"
+        assert str(ct_response_json['Data'][0]['ticketid']) == ticket_id, f"注單 :{ticket_id}無法在控端查詢到"

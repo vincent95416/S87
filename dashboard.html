@@ -341,7 +341,7 @@
         }
 
         .trace-files.active {
-            display: flex;
+            display: flex !important;
         }
 
         .trace-file {
@@ -395,6 +395,111 @@
             gap: 10px;
         }
 
+        /* Toast 通知樣式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .toast {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        .toast-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+
+        .toast-message {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .toast-close:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -403,10 +508,19 @@
             .test-buttons {
                 grid-template-columns: 1fr;
             }
+
+            .toast-container {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <div class="header">
             <h1>🎯 測試控制台</h1>
@@ -422,6 +536,9 @@
                 <button class="btn btn-outline" onclick="window.open('/api/reports/html', '_blank')">
                     📊 HTML 報告
                 </button>
+                <button class="btn btn-primary" style="background: #ff5a5f; border: none;" onclick="viewAllure()">
+                    📊 Allure 報表
+                </button>
                 <button class="btn btn-secondary" onclick="checkStatus()">更新狀態</button>
             </div>
         </div>
@@ -435,7 +552,7 @@
                     <label>測試案例</label>
                     <select id="testCase">
                         <option value="regression">迴歸測試</option>
-                        <option value="betting">大廳測試</option>
+                        <option value="maintain_check">維護轉導檢查</option>
                     </select>
                 </div>
 
@@ -450,7 +567,9 @@
                 <div class="test-selector">
                     <label>站點</label>
                     <select id="site">
-                        <option value="new20">NEW20</option>
+                        <option value="new20">2.0</option>
+                        <option value="hr2222">Stage現金站(hr2222)</option>
+                        <option value="hr5555">StageApi站(hr5555)</option>
                         <option value="spg">SPG(未開發)</option>
                     </select>
                 </div>
@@ -501,9 +620,70 @@
     </div>
 
     <script>
-        const API_BASE = 'http://${window.location.hostname}:8000';
+        const API_BASE = 'http://' + window.location.hostname + ':8000';
         let testHistory = JSON.parse(localStorage.getItem('testHistory') || '[]');
         let isRunning = false;
+        let lastServiceStatus = true; // 追蹤上次的服務狀態
+        let serviceCheckFailCount = 0; // 連續檢查失敗次數
+
+        // Toast 通知系統
+        const Toast = {
+            show(message, title = '通知', type = 'error', duration = 5000) {
+                const container = document.getElementById('toastContainer');
+                const toastId = 'toast-' + Date.now();
+
+                const icons = {
+                    success: '✓',
+                    warning: '⚠️',
+                    error: '✗'
+                };
+
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.id = toastId;
+                toast.innerHTML = `
+                    <div class="toast-icon">${icons[type] || '📢'}</div>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                    <button class="toast-close" onclick="Toast.close('${toastId}')">×</button>
+                `;
+
+                container.appendChild(toast);
+
+                // 自動關閉
+                if (duration > 0) {
+                    setTimeout(() => {
+                        Toast.close(toastId);
+                    }, duration);
+                }
+
+                return toastId;
+            },
+
+            close(toastId) {
+                const toast = document.getElementById(toastId);
+                if (toast) {
+                    toast.classList.add('removing');
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                }
+            },
+
+            success(message, title = '成功') {
+                return this.show(message, title, 'success');
+            },
+
+            warning(message, title = '警告') {
+                return this.show(message, title, 'warning');
+            },
+
+            error(message, title = '錯誤') {
+                return this.show(message, title, 'error');
+            }
+        };
 
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
@@ -532,9 +712,24 @@
                 }
 
                 document.getElementById('runBtn').disabled = isRunning;
+
+                // 服務恢復正常
+                if (!lastServiceStatus) {
+                    Toast.success('服務已恢復連接', '連接成功');
+                    lastServiceStatus = true;
+                }
+                serviceCheckFailCount = 0;
+
             } catch (error) {
                 console.error('無法連接到後端服務:', error);
-                document.getElementById('statusText').textContent = '⚠️ 無法連接服務';
+                serviceCheckFailCount++;
+
+                // 只在第一次失敗或連續失敗3次時顯示 Toast
+                if (lastServiceStatus || serviceCheckFailCount >= 3) {
+                    document.getElementById('statusText').textContent = '⚠️ 無法連接服務';
+                    Toast.error('服務無法連接，請檢查服務狀態', '未連接到服務', 8000);
+                    lastServiceStatus = false;
+                }
             }
         }
 
@@ -586,6 +781,8 @@
                     </div>
                 `;
 
+                Toast.success('測試已啟動，請稍候片刻', '測試啟動');
+
                 // 開始輪詢狀態
                 pollTestStatus();
 
@@ -601,8 +798,7 @@
                         </div>
                     </div>
                 `;
-            } finally {
-                // 不要在這裡重置狀態，等輪詢完成再說
+                Toast.error(error.message || '無法連接到後端服務', '執行失敗');
             }
         }
 
@@ -647,8 +843,15 @@
                         displayResult(result);
                         renderHistory();
 
+                        // 顯示測試完成通知
+                        if (result.success) {
+                            Toast.success('所有測試案例已通過', '測試完成');
+                        } else {
+                            Toast.warning('部分測試案例未通過，請查看詳細報告', '測試完成');
+                        }
+
                         // 重新載入 traces
-                        setTimeout(() => loadTraceSessions(), 2000);
+                        setTimeout(() => loadTraceSessions(), 3000);
                     }
 
                 } catch (error) {
@@ -792,21 +995,58 @@
         // 切換 Trace 檔案列表
         function toggleTraceFiles(sessionId) {
             const element = document.getElementById(`traces-${sessionId}`);
-            element.classList.toggle('active');
+            if (element) {
+                const isCurrentlyActive = element.classList.contains('active');
+
+                if (!isCurrentlyActive) {
+                    element.classList.add('active');
+                } else {
+                    element.classList.remove('active');
+                }
+            } else {
+                console.error(`找不到 ID: traces-${sessionId}`);
+            }
         }
 
         // 查看 Trace
         function viewTrace(sessionId, traceName) {
             const traceUrl = `${API_BASE}/traces/${sessionId}/${traceName}`;
-            const viewerUrl = `${API_BASE}/viewer?trace=${encodeURIComponent(traceUrl)}`;
-            window.open(viewerUrl, '_blank');
+            const link = document.createElement('a');
+            link.href = traceUrl;
+            link.download = traceName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            Toast.success('Trace 檔案已開始下載', '下載中');
+            setTimeout(() => {
+                window.open('https://trace.playwright.dev/', '_blank');
+                Toast.show('請將下載的 zip 檔案拖入新開啟的網頁查看', '查看提示', 'warning', 8000);
+            }, 500);
         }
 
-        // 定期檢查狀態
-        setInterval(checkStatus, 5000);
+        // 定期檢查狀態 - 改為 10 秒一次
+        setInterval(checkStatus, 10000);
 
         // 定期更新 traces
         setInterval(loadTraceSessions, 30000);
+
+        // 查看 Allure
+        async function viewAllure() {
+            try {
+                const response = await fetch(`${API_BASE}/api/reports/allure`);
+                if (response.ok) {
+                    const data = await response.json();
+                    window.open(`${API_BASE}${data.url}`, '_blank');
+                } else {
+                    const err = await response.json();
+                    Toast.warning(err.detail || '報告未就緒');
+                }
+            } catch (error) {
+                console.error('Allure 錯誤:', error);
+                Toast.error('無法取得報告路徑');
+            }
+        }
     </script>
 </body>
 </html>

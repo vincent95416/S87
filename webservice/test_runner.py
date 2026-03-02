@@ -37,7 +37,7 @@ class TestRunner:
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     @staticmethod
-    def _kill_process(self, process: subprocess.Popen) -> None:
+    def _kill_process(process: subprocess.Popen) -> None:
         try:
             if os.name != 'nt': #linux
                 try:
@@ -65,7 +65,7 @@ class TestRunner:
             "pytest",
             self.test_path,
             f"--env={self.env}",
-            f"--site={self.site}",
+            f"--site={self.site}"
         ]
         return cmd
 
@@ -107,6 +107,19 @@ class TestRunner:
                 self._kill_process(process)
                 return self._create_error_response(start_time, "測試執行超時，強制終止進程。")
 
+            # allure generate後的html報表
+            allure_html_dir = self.reports_dir / "allure-report-html"
+
+            if self.allure_dir.exists():
+                try:
+                    gen_cmd = f"allure generate {self.allure_dir} -o {allure_html_dir} --clean"
+                    result = subprocess.run(gen_cmd, shell=True, capture_output=True, check=True, cwd=str(self.project_root), text=True)
+                    logger.info(f"Allure 報告產生成功")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Allure 產師失敗: {e.stderr}")
+                except Exception as e:
+                    logger.error(f"Allure 產生失敗: {str(e)}")
+
             duration = round(time.time() - start_time, 2)
             # 解析測試結果
             summary = self._get_summary_from_xml()
@@ -117,7 +130,7 @@ class TestRunner:
                 "duration": duration,
                 "summary": summary,
                 "html_report": "html_report.html",
-                "allure_report": str(self.reports_dir / "allure-results"),
+                "allure_report": "/allure/index.html",
                 "message": "測試完成" if exit_code == 0 else "測試執行失敗",
                 "output": (stdout + stderr)[-5000:]
             }
@@ -136,7 +149,7 @@ class TestRunner:
                     logger.error("process無法終止")
 
     @staticmethod
-    def _create_error_response(self, start_time: float, message: str) -> Dict:
+    def _create_error_response(start_time: float, message: str) -> Dict:
         """統一錯誤回傳格式"""
         return {
             "success": False,
