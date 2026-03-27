@@ -124,6 +124,16 @@ class TestRunner:
             # 解析測試結果
             summary = self._get_summary_from_xml()
 
+            # AI 分析（僅在有失敗且設定 API Key 時執行）
+            ai_analysis = None
+            failed_count = summary.get("failed", 0) + summary.get("errors", 0)
+            logger.info(f"檢查 AI 分析條件: failed={summary.get('failed', 0)}, errors={summary.get('errors', 0)}")
+            if failed_count > 0:
+                logger.info(f"偵測到 {failed_count} 個失敗測試，準備執行 AI 分析")
+                ai_analysis = self._run_ai_analysis()
+            else:
+                logger.info("所有測試通過，跳過 AI 分析")
+
             return {
                 "success": exit_code == 0,
                 "exit_code": exit_code,
@@ -132,7 +142,8 @@ class TestRunner:
                 "html_report": "html_report.html",
                 "allure_report": "/allure/index.html",
                 "message": "測試完成" if exit_code == 0 else "測試執行失敗",
-                "output": (stdout + stderr)[-5000:]
+                "output": (stdout + stderr)[-5000:],
+                "ai_analysis": ai_analysis,
             }
 
         except Exception as e:
@@ -147,6 +158,34 @@ class TestRunner:
                     process.wait(timeout=3)
                 except subprocess.TimeoutExpired:
                     logger.error("process無法終止")
+
+    def _find_latest_trace_session(self) -> "Path | None":
+        """找最新的 trace session 目錄"""
+        trace_root = self.project_root / "traces"
+        if not trace_root.exists():
+            return None
+        sessions = [d for d in trace_root.iterdir() if d.is_dir()]
+        if not sessions:
+            return None
+        return max(sessions, key=lambda d: d.name)
+
+    def _run_ai_analysis(self) -> "dict | None":
+        """呼叫 AIAnalyzer，失敗時不影響主流程"""
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        logger.info(f"檢查 ANTHROPIC_API_KEY: {'已設定' if api_key else '未設定'}")
+        if not api_key:
+            logger.warning("未設定 ANTHROPIC_API_KEY，跳過 AI 分析")
+            return None
+        try:
+            from ai.analyzer import AIAnalyzer
+            analyzer = AIAnalyzer(api_key)
+            trace_session = self._find_latest_trace_session()
+            result = analyzer.analyze(trace_session, self.xml_report_path, self.allure_dir)
+            logger.info(f"✅ AI 分析完成，分析了 {len(result.get('failed_tests', []))} 個失敗測試")
+            return result
+        except Exception as e:
+            logger.error(f"❌ AI 分析失敗（不影響測試結果）: {e}", exc_info=True)
+            return None
 
     @staticmethod
     def _create_error_response(start_time: float, message: str) -> Dict:

@@ -8,6 +8,7 @@
 2. **Fixture 分層**: Session 級別共享登入狀態，Function 級別處理 Trace
 3. **失敗即錄**: Trace 只在測試失敗時保存，節省儲存空間
 4. **Web 驅動**: FastAPI 提供 RESTful API 觸發測試與查看結果
+5. **AI 智能診斷**: 測試失敗時自動整合多源資料（截圖、API 錯誤、stack trace）呼叫 Claude API 分析根因
 
 ## 完整目錄結構
 
@@ -18,13 +19,13 @@
 ├── requirements.txt              # Python 依賴
 ├── docker-compose.yml            # Web 服務 + CI Tester 雙角色
 ├── Dockerfile                    # 容器映像定義
+├── dashboard.html                # Web 控制台前端（測試執行介面）
 │
 ├── env/                          # 環境配置
 │   ├── dev.ini
 │   └── uat.ini
 │
 ├── src/
-│   ├── config.py                 # 配置載入邏輯
 │   │
 │   ├── pages/                    # Page Object Models
 │   │   ├── base_page.py         # 全域 BasePage（所有站點共享）
@@ -43,7 +44,14 @@
 │   │
 │   └── services/                 # API 服務層（高階封裝）
 │       ├── base_service.py
-│       └── admin.py
+│       ├── admin.py
+│       └── agent.py
+│
+├── ai/                           # AI 錯誤分析模組
+│   ├── __init__.py
+│   ├── analyzer.py               # Claude API 整合，組合 prompt 並解析回應
+│   ├── trace_parser.py           # 從 trace.zip 提取截圖與 network log
+│   └── report_parser.py          # 解析 JUnit XML 和 Allure JSON
 │
 ├── tests/
 │   ├── conftest.py               # 核心 Fixtures（詳見下節）
@@ -61,20 +69,18 @@
 │
 ├── webservice/                   # Web 控制台後端
 │   ├── main.py                  # FastAPI 應用（API 路由）
-│   ├── test_runner.py           # Pytest 執行器封裝
+│   ├── test_runner.py           # Pytest 執行器封裝 + AI 分析觸發
 │   ├── lock_manager.py          # 並發鎖管理（防止同時執行）
 │   └── models.py                # Pydantic 模型定義
 │
 ├── reports/                      # 測試報告輸出
+│   ├── allure-results/          # Allure JSON 原始資料
 │   ├── html_report.html
-│   └── results.xml
+│   └── results.xml              # JUnit XML 格式
 │
-├── traces/                       # Playwright Trace 儲存
-│   └── YYYYMMDD_HHMMSS/         # 每次測試 Session
-│       └── test_*.zip
-│
-└── viewer/                       # Playwright Trace Viewer 靜態檔案
-    └── index.html
+└── traces/                       # Playwright Trace 儲存
+    └── YYYYMMDD_HHMMSS/         # 每次測試 Session
+        └── test_*.zip
 ```
 
 ## Fixture 架構
@@ -104,7 +110,7 @@ config (session)
 **2. context** (tests/conftest.py)
 - Playwright BrowserContext，session 級別
 - 啟動 Trace 錄製（screenshots, snapshots, sources）
-- 設定 viewport 為 2560x1440
+- 預設 headless=True, slow_mo=100
 
 **3. page** (tests/conftest.py)
 - 單一 Page 實例，session 級別共享
@@ -134,31 +140,47 @@ config (session)
 **基礎結構**
 ```python
 # src/pages/base_page.py (全域)
+from playwright.sync_api import Page
+
 class BasePage:
-    def __init__(self, page: Page, config):
+    def __init__(self, page: Page):
         self.page = page
-        self.config = config
-    
+
     def get_auth_token(self):
         # 從 localStorage 取得 Token
         pass
 
 # src/pages/new20/base_page.py (站點專用)
-class BasePage(共用BasePage):
-    def __init__(self, page, config):
-        super().__init__(page, config)
-        self.base_url = config.get('new20', 'base_url')
+from src.pages.base_page import BasePage
+
+class BasePage(BasePage):  # 繼承全域 BasePage
+    def __init__(self, page):
+        super().__init__(page)
+
+# src/pages/new20/login_page.py
+from src.pages.new20.base_page import BasePage
+
+class LoginPage(BasePage):
+    def __init__(self, page: Page, config):
+        super().__init__(page)
+        self.url = config.get('new20', 'base_url')
+
+    def login(self, username, password):
+        self.navigate(self.url)
+        self.fill_username(username)
+        self.fill_password(password)
+        self.click_login_button()
 ```
 
 **繼承層級**
 ```
-共用 BasePage
-    ├─> new20.BasePage
+src/pages/base_page.py (全域 BasePage)
+    ├─> src/pages/new20/base_page.py (new20.BasePage)
     │      ├─> LoginPage
     │      ├─> LobbyPage
     │      └─> BettingRecordPage
     │
-    └─> spg.BasePage
+    └─> src/pages/spg/base_page.py (spg.BasePage)
            └─> LobbyPage
 ```
 
@@ -174,21 +196,35 @@ services/ (高階封裝層，可選)
 
 **範例**
 ```python
-# api_client.py
+# src/apicheck/api_client.py
 class APIClient:
-    def post(self, endpoint, data):
-        return requests.post(f"{self.base_url}{endpoint}", json=data)
+    def __init__(self, base_url, auth_strategy, credentials):
+        self.base_url = base_url
+        self.session = requests.Session()
 
-# api_manager.py
-class APIManager:
     def authenticate(self):
-        response = self.client.post('/auth/login', {...})
-        self.token = response.json()['token']
+        return self.auth_strategy.authenticate(self.session, self.base_url, self.credentials)
+
+    def post(self, url, **kwargs):
+        return self.session.post(url, **kwargs, verify=False)
+
+# src/apicheck/api_manager.py
+class APIManager:
+    def __init__(self, client: APIClient):
+        self.client = client
+
+    def authenticate(self):
+        return self.client.authenticate()
+
+    @property
+    def admin(self):
+        return AdminService(self.client, self.client.base_url)
 
 # tests/apicheck/test_admin.py
-def test_login(api_manager):
+def test_admin_login(api_manager):
     api_manager.authenticate()
-    assert api_manager.token is not None
+    result = api_manager.admin.get_user_list()
+    assert result is not None
 ```
 
 ### 3. Trace 錄製機制
@@ -219,28 +255,64 @@ def test_report(item, call):
 | 端點 | 方法 | 功能 |
 |------|------|------|
 | `/` | GET | Dashboard 頁面 |
-| `/status` | GET | 取得執行狀態 |
+| `/status` | GET | 取得執行狀態（含 ai_analysis） |
 | `/api/tests/regression` | POST | 觸發測試 |
 | `/api/traces/sessions` | GET | 列出所有 Trace Sessions |
 | `/api/traces/{session}/{name}` | GET | 下載特定 Trace |
 | `/api/reports/html` | GET | 取得 HTML 報告 |
-| `/viewer/*` | GET | Trace Viewer 靜態檔案 |
+| `/api/reports/allure` | GET | 取得 Allure 報告連結 |
+| `/static/*` | GET | 靜態檔案（reports 目錄） |
+| `/traces/*` | GET | Trace 檔案靜態存取 |
+| `/allure/*` | GET | Allure 報告靜態檔案 |
+
+### AI 錯誤分析流程
+
+```
+[前端] dashboard.html
+    ↓ POST /api/tests/regression
+[後端] webservice/main.py
+    ↓ BackgroundTasks
+[執行器] webservice/test_runner.py
+    ├─ 執行 pytest (生成 XML/JSON/Trace)
+    ├─ 若有失敗 → 呼叫 AIAnalyzer.analyze()
+    │   ├─ ai/report_parser.py: 解析 JUnit XML + Allure JSON
+    │   ├─ ai/trace_parser.py: 從 trace.zip 提取截圖 + API 錯誤
+    │   └─ ai/analyzer.py: 組合 prompt → Claude API (vision)
+    └─ 回傳結果 (含 ai_analysis)
+        ↓
+[前端] 輪詢 GET /status
+    └─ 渲染 AI 診斷卡片（category、root_cause、suggested_action）
+```
+
+**關鍵實作**：
+- `test_runner.py` 在測試完成後檢查 `summary["failed"] > 0`，若有失敗則觸發 AI 分析
+- 從環境變數讀取 `ANTHROPIC_API_KEY`，若無則跳過分析（不中斷測試流程）
+- AI 分析結果加入 `latest_test_result["ai_analysis"]`，透過 `/status` 端點回傳前端
 
 ### 並發控制
 
-**LockManager** 確保同一站點同時只能執行一個測試：
+**LockManager** 確保同時只能執行一個測試：
 
 ```python
 # webservice/lock_manager.py
 class LockManager:
-    def acquire(self, site: str) -> bool:
-        if self.current_test == site:
-            return False
-        self.current_test = site
-        return True
-    
+    def __init__(self):
+        self._lock = Lock()
+        self._current_test: Optional[str] = None
+        self._is_locked = False
+
+    def acquire(self, test_name: str) -> bool:
+        acquired = self._lock.acquire(blocking=False)
+        if acquired:
+            self._current_test = test_name
+            self._is_locked = True
+        return acquired
+
     def release(self):
-        self.current_test = None
+        if self._is_locked:
+            self._current_test = None
+            self._is_locked = False
+            self._lock.release()
 ```
 
 ### 背景任務
@@ -248,12 +320,16 @@ class LockManager:
 使用 FastAPI 的 `BackgroundTasks` 執行測試：
 
 ```python
+# webservice/main.py
 @app.post("/api/tests/regression")
-def run_test(request: TestRequest, task: BackgroundTasks):
+async def run_regression_test(request: TestRequest, background_tasks: BackgroundTasks):
+    if lock_manager.is_locked():
+        raise HTTPException(status_code=409, detail="測試正在執行中")
+
     if not lock_manager.acquire(request.site):
-        raise HTTPException(409, "系統忙碌中")
-    
-    task.add_task(_execute_flow, request, ...)
+        raise HTTPException(status_code=409, detail="無法取得執行鎖")
+
+    background_tasks.add_task(_execute_flow, request, target_path, site_name)
     return {"status": "accepted"}
 ```
 
@@ -315,9 +391,20 @@ pytest --site=new_site
 ```python
 # tests/spg/conftest.py
 @pytest.fixture(scope="session")
-def e2e_logged_in_page(page, config):
-    # spg 專屬登入邏輯
-    ...
+def e2e_logged_in_page(page: Page, config):
+    """demo_site 專用登入流程：透過 API 取得 RedirectUrl"""
+    site = config.get('DEFAULT', 'site')
+    base_url = config.get(site, 'base_url')
+
+    # 呼叫 API 取得登入 URL
+    url = f'api.url'
+    payload = f'payload'
+    response = requests.post(url=url, data=payload)
+    redirect_url = response.json()['Data']['RedirectUrl']
+
+    # 導航到登入後頁面
+    page.goto(redirect_url)
+    lobby_page = LobbyPage(page, config)
     return lobby_page
 ```
 
@@ -357,11 +444,17 @@ def test_create_user(api_manager):
 ### 4. Trace 管理
 - **定期清理**: Trace 檔案會累積，建議定期刪除舊 Session
 - **關鍵測試**: 重要流程測試失敗時優先查看 Trace
+- **AI 輔助分析**: 失敗測試會自動提取 Trace 中的截圖與 API 錯誤，送交 Claude 分析根因
+
+### 5. AI 分析最佳實踐
+- **API Key 管理**: 透過 `.env` 檔案管理，不要寫死在程式碼中
+- **失敗容錯**: AI 分析失敗不影響測試執行，確保主流程穩定
+- **結果解讀**: AI 提供的 `confidence` 分數可作為參考，低於 0.7 建議人工複查
 
 ### 5. CI/CD 整合
 - **獨立報告**: CI 環境的報告路徑與本地分開
-- **錯誤通知**: 測試失敗時通知 Slack/Email
-- **Artifacts 保存**: 報告與 Trace 作為 GitLab Artifacts 上傳
+- **錯誤通知**: 測試失敗時通知 Slack/Email（可整合 AI 診斷摘要）
+- **Artifacts 保存**: 報告、Trace 與 AI 分析結果作為 GitLab Artifacts 上傳
 
 ## 常見問題
 
@@ -374,18 +467,26 @@ A: 節省儲存空間。成功測試通常不需回放，失敗測試才需要 T
 **Q: 如何在本地除錯時也保存成功測試的 Trace？**  
 A: 修改 `trace_handler` Fixture，移除 `if test_failed` 判斷即可。
 
-**Q: Web 服務的測試執行是同步還是異步？**  
+**Q: Web 服務的測試執行是同步還是異步？**
 A: 異步。透過 `BackgroundTasks` 在背景執行，API 立即回傳 `accepted` 狀態。
+
+**Q: AI 分析需要多久時間？**
+A: 通常 5-15 秒，取決於失敗測試數量與 Claude API 回應速度。分析在背景執行，不阻塞測試流程。
+
+**Q: 沒有設定 ANTHROPIC_API_KEY 會怎樣？**
+A: 測試正常執行，只是跳過 AI 分析，`ai_analysis` 欄位為 `null`。
 
 ## 技術債務與未來改進
 
 - [ ] 支援並行測試（Pytest-xdist）
 - [ ] Trace 自動過期清理機制
 - [ ] Web 服務新增測試排程功能
-- [ ] 整合 Slack 通知（測試完成/失敗）
+- [ ] 整合 Slack 通知（測試完成/失敗 + AI 診斷摘要）
 - [ ] 支援 Allure Report 在 Web 介面直接查看
+- [ ] AI 分析結果持久化（儲存至資料庫，支援歷史查詢）
+- [ ] 手動重新分析指定 session 的 trace（`GET /api/ai/analyze/{session_id}`）
 
 ---
 
 **維護者**: V
-**更新日期**: 2025-01-23
+**更新日期**: 2026-03-23

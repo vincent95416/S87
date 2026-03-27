@@ -1,6 +1,8 @@
 services:
   # 角色一：長期運行的控制台 (Web)
   webservice:
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     build: .
     image: test-image:latest  # 給這個鏡像一個統一的名字
     ports:
@@ -15,6 +17,8 @@ services:
 
   # 角色二：臨時的測試任務 (Tester)
   tester:
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     image: test-image:latest  # 直接用上面 build 好的，不用重新 build
     volumes:
       - /home/ssport/test_output:/app/reports     # 寫入同一個抽屜

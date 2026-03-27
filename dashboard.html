@@ -181,7 +181,7 @@
             border-radius: 6px;
             padding: 15px;
             margin-top: 15px;
-            max-height: 400px;
+            max-height: 50vh;
             overflow-y: auto;
         }
 
@@ -359,6 +359,17 @@
             transform: translateX(5px);
         }
 
+        .session-toggle-icon {
+            transition: transform 0.2s;
+            display: inline-block;
+            margin-left: 8px;
+            color: #9ca3af;
+        }
+
+        .trace-session.expanded .session-toggle-icon {
+            transform: rotate(90deg);
+        }
+
         .trace-name {
             font-size: 14px;
             color: #374151;
@@ -500,6 +511,71 @@
             animation: slideOut 0.3s ease-in forwards;
         }
 
+        /* AI 分析樣式 */
+        .ai-analysis {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .ai-summary {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .failed-test-item {
+            background: white;
+            border-left: 3px solid #ef4444;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .test-name {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .ai-field {
+            margin: 6px 0;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .ai-field strong {
+            color: #4b5563;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -507,6 +583,10 @@
 
             .test-buttons {
                 grid-template-columns: 1fr;
+            }
+
+            .toolbar-buttons {
+                flex-wrap: wrap;
             }
 
             .toast-container {
@@ -625,6 +705,7 @@
         let isRunning = false;
         let lastServiceStatus = true; // 追蹤上次的服務狀態
         let serviceCheckFailCount = 0; // 連續檢查失敗次數
+        const POLL_TIMEOUT_MS = 5 * 60 * 1000; // 5 分鐘輪詢上限
 
         // Toast 通知系統
         const Toast = {
@@ -690,6 +771,18 @@
             checkStatus();
             renderHistory();
             loadTraceSessions();
+
+            // Event delegation for trace container (避免 XSS)
+            document.getElementById('traceContainer').addEventListener('click', (e) => {
+                const header = e.target.closest('.session-header');
+                const viewBtn = e.target.closest('.btn-view-trace');
+
+                if (header) {
+                    toggleTraceFiles(header.dataset.sessionId);
+                } else if (viewBtn) {
+                    viewTrace(viewBtn.dataset.sessionId, viewBtn.dataset.traceName);
+                }
+            });
         });
 
         // 檢查狀態
@@ -740,7 +833,7 @@
             const site = document.getElementById('site').value;
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const Url = `${API_BASE}/api/tests/${testCase}`
+            const url = `${API_BASE}/api/tests/${testCase}`
             const payload = { env, site};
             if (username) payload.username = username;
             if (password) payload.password = password;
@@ -757,7 +850,7 @@
             checkStatus();
 
             try {
-                const response = await fetch(Url, {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -807,7 +900,18 @@
         async function pollTestStatus() {
             if (pollInterval) clearInterval(pollInterval);
 
+            const pollStartTime = Date.now();
+
             pollInterval = setInterval(async () => {
+                // 超過 5 分鐘自動停止
+                if (Date.now() - pollStartTime > POLL_TIMEOUT_MS) {
+                    clearInterval(pollInterval);
+                    isRunning = false;
+                    document.getElementById('runBtn').disabled = false;
+                    Toast.warning('測試執行時間過長，請手動確認狀態', '輪詢逾時');
+                    return;
+                }
+
                 try {
                     const response = await fetch(`${API_BASE}/status`);
                     const data = await response.json();
@@ -879,6 +983,38 @@
             const failed = summary.failed || 0;
             const duration = result.duration || 0;
 
+            // AI 分析區塊
+            let aiAnalysisHtml = '';
+            if (result.ai_analysis) {
+                const ai = result.ai_analysis;
+                aiAnalysisHtml = `
+                    <div class="ai-analysis">
+                        <div class="ai-header">
+                            🤖 AI 診斷報告
+                        </div>
+                        <div class="ai-summary">
+                            ${ai.summary || '無摘要'}
+                        </div>
+                        ${ai.failed_tests && ai.failed_tests.length > 0 ? ai.failed_tests.map(test => `
+                            <div class="failed-test-item">
+                                <div class="test-name">${test.test_name}</div>
+                                <div class="ai-field">
+                                    <strong>原因：</strong>${test.root_cause}
+                                </div>
+                                <div class="ai-field">
+                                    <strong>類型：</strong><span class="category-badge">${test.category}</span>
+                                </div>
+                                ${test.last_screenshot_desc ? `<div class="ai-field"><strong>截圖：</strong>${test.last_screenshot_desc}</div>` : ''}
+                                <div class="ai-field">
+                                    <strong>建議：</strong>${test.suggested_action}
+                                </div>
+                                ${test.is_env_issue ? '<div class="ai-field" style="color: #dc2626;">⚠️ 疑似環境問題</div>' : ''}
+                            </div>
+                        `).join('') : ''}
+                    </div>
+                `;
+            }
+
             document.getElementById('currentResult').innerHTML = `
                 <div class="result-panel">
                     <div class="result-item ${statusClass}">
@@ -892,6 +1028,7 @@
                         </div>
                         ${links.length > 0 ? `<div class="result-links">${links.join('')}</div>` : ''}
                     </div>
+                    ${aiAnalysisHtml}
                 </div>
             `;
         }
@@ -932,8 +1069,6 @@
         // 清除結果
         function clearResults() {
             document.getElementById('currentResult').innerHTML = '';
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
         }
 
         // 載入 Trace Sessions
@@ -957,27 +1092,39 @@
 
                 container.innerHTML = `
                     <div class="trace-sessions">
-                        ${sessions.map(session => `
+                        ${sessions.map(session => {
+                            const safeSessionId = session.session_id.replace(/"/g, '&quot;');
+                            return `
                             <div class="trace-session">
-                                <div class="session-header" onclick="toggleTraceFiles('${session.session_id}')">
+                                <div class="session-header" data-session-id="${safeSessionId}">
                                     <span class="session-title">📅 ${session.session_id}</span>
-                                    <span class="session-count">${session.count || session.trace_count || 0} 個失敗測試</span>
+                                    <span>
+                                        <span class="session-count">${session.count || session.trace_count || 0} 個失敗測試</span>
+                                        <span class="session-toggle-icon">▶</span>
+                                    </span>
                                 </div>
-                                <div class="trace-files" id="traces-${session.session_id}">
-                                    ${session.traces.map(trace => `
+                                <div class="trace-files" id="traces-${safeSessionId}">
+                                    ${session.traces.map(trace => {
+                                        const safeName = trace.name.replace(/"/g, '&quot;');
+                                        const displayName = trace.test_name || trace.name;
+                                        return `
                                         <div class="trace-file">
                                             <div>
-                                                <div class="trace-name">🔴 ${trace.test_name || trace.name}</div>
+                                                <div class="trace-name">🔴 ${displayName}</div>
                                                 <div class="trace-size">${(trace.size / 1024).toFixed(2)} KB</div>
                                             </div>
-                                            <button class="btn-view-trace" onclick="viewTrace('${session.session_id}', '${trace.name}')">
+                                            <button class="btn-view-trace"
+                                                data-session-id="${safeSessionId}"
+                                                data-trace-name="${safeName}">
                                                 查看 Trace
                                             </button>
                                         </div>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </div>
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 `;
             } catch (error) {
@@ -995,14 +1142,10 @@
         // 切換 Trace 檔案列表
         function toggleTraceFiles(sessionId) {
             const element = document.getElementById(`traces-${sessionId}`);
+            const session = element?.closest('.trace-session');
             if (element) {
-                const isCurrentlyActive = element.classList.contains('active');
-
-                if (!isCurrentlyActive) {
-                    element.classList.add('active');
-                } else {
-                    element.classList.remove('active');
-                }
+                element.classList.toggle('active');
+                session?.classList.toggle('expanded');
             } else {
                 console.error(`找不到 ID: traces-${sessionId}`);
             }

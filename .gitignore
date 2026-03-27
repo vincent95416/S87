@@ -25,3 +25,6 @@ videos/
 reports/
 traces/
 .claude/
+
+# Docker secrets
+docker-compose.override.yml

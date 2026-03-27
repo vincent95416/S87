@@ -100,3 +100,18 @@ class TraceSession(BaseModel):
     session_id: str
     count: int
     traces: List[TraceFile]
+
+class FailedTestAnalysis(BaseModel):
+    test_name: str
+    root_cause: str
+    category: str
+    confidence: float
+    api_errors: List[dict] = []
+    last_screenshot_desc: str = ""
+    suggested_action: str
+    is_env_issue: bool
+
+class AIAnalysisResult(BaseModel):
+    analyzed_at: str
+    failed_tests: List[FailedTestAnalysis]
+    summary: str
