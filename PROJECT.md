@@ -49,7 +49,7 @@
 │
 ├── ai/                           # AI 錯誤分析模組
 │   ├── __init__.py
-│   ├── analyzer.py               # Claude API 整合，組合 prompt 並解析回應
+│   ├── analyzer.py               # claude CLI 子程序整合，組合 prompt 並解析回應
 │   ├── trace_parser.py           # 從 trace.zip 提取截圖與 network log
 │   └── report_parser.py          # 解析 JUnit XML 和 Allure JSON
 │
@@ -277,7 +277,7 @@ def test_report(item, call):
     ├─ 若有失敗 → 呼叫 AIAnalyzer.analyze()
     │   ├─ ai/report_parser.py: 解析 JUnit XML + Allure JSON
     │   ├─ ai/trace_parser.py: 從 trace.zip 提取截圖 + API 錯誤
-    │   └─ ai/analyzer.py: 組合 prompt → Claude API (vision)
+    │   └─ ai/analyzer.py: 組合 prompt → claude CLI 子程序（Team OAuth）
     └─ 回傳結果 (含 ai_analysis)
         ↓
 [前端] 輪詢 GET /status
@@ -286,7 +286,7 @@ def test_report(item, call):
 
 **關鍵實作**：
 - `test_runner.py` 在測試完成後檢查 `summary["failed"] > 0`，若有失敗則觸發 AI 分析
-- 從環境變數讀取 `ANTHROPIC_API_KEY`，若無則跳過分析（不中斷測試流程）
+- `analyzer.py` 透過 `claude -p` CLI 子程序執行分析，借用 Team OAuth 憑證（掛載自 `/root/.claude`）
 - AI 分析結果加入 `latest_test_result["ai_analysis"]`，透過 `/status` 端點回傳前端
 
 ### 並發控制
@@ -447,9 +447,9 @@ def test_create_user(api_manager):
 - **AI 輔助分析**: 失敗測試會自動提取 Trace 中的截圖與 API 錯誤，送交 Claude 分析根因
 
 ### 5. AI 分析最佳實踐
-- **API Key 管理**: 透過 `.env` 檔案管理，不要寫死在程式碼中
+- **Team OAuth 認證**: 在 Docker 主機執行 `claude auth login`，docker-compose 掛載 `/root/.claude` 至容器，無需管理 API Key
 - **失敗容錯**: AI 分析失敗不影響測試執行，確保主流程穩定
-- **結果解讀**: AI 提供的 `confidence` 分數可作為參考，低於 0.7 建議人工複查
+- **結果解讀**: AI 提供的 `category` 分類可作為初步參考，`is_env_issue` 為 `true` 時優先排查環境問題
 
 ### 5. CI/CD 整合
 - **獨立報告**: CI 環境的報告路徑與本地分開
@@ -473,7 +473,7 @@ A: 異步。透過 `BackgroundTasks` 在背景執行，API 立即回傳 `accepte
 **Q: AI 分析需要多久時間？**
 A: 通常 5-15 秒，取決於失敗測試數量與 Claude API 回應速度。分析在背景執行，不阻塞測試流程。
 
-**Q: 沒有設定 ANTHROPIC_API_KEY 會怎樣？**
+**Q: Docker 主機沒有執行 `claude auth login` 會怎樣？**
 A: 測試正常執行，只是跳過 AI 分析，`ai_analysis` 欄位為 `null`。
 
 ## 技術債務與未來改進

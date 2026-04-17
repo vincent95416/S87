@@ -1,12 +1,22 @@
 from datetime import datetime, timedelta
+import random
 
 class Config:
 
     class Testdata:
+        ssapi_url = "https://ssapi.supers168.com"
+        ssapi_vendor = "d5235"
+        ssapi_sign = "F6D2E6EC20EBFC9EDEB38985462A84FC"
+        ssapi_account = "a366"
+        ssapi_up_account = "a533"
+        ssapi_account = random.randint
+
         ACQSITE = ["0", "TX", "KU", "CTX", "PIN", "SB", "PM", "DB_ESPORT", "BET365", "188BET", "1XBET"]
 
         _now = datetime.now()
         _tomorrow = _now + timedelta(days=1)
+        ts = _now.timestamp()
+        FORMATTED_TIME = _now.strftime("%Y%m%d%H%M%S")
         FORMATTED_DATE = _now.strftime("%Y-%m-%d")
         TOMORROW = _tomorrow.strftime("%Y-%m-%d")
 

@@ -171,14 +171,9 @@ class TestRunner:
 
     def _run_ai_analysis(self) -> "dict | None":
         """呼叫 AIAnalyzer，失敗時不影響主流程"""
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        logger.info(f"檢查 ANTHROPIC_API_KEY: {'已設定' if api_key else '未設定'}")
-        if not api_key:
-            logger.warning("未設定 ANTHROPIC_API_KEY，跳過 AI 分析")
-            return None
         try:
             from ai.analyzer import AIAnalyzer
-            analyzer = AIAnalyzer(api_key)
+            analyzer = AIAnalyzer()
             trace_session = self._find_latest_trace_session()
             result = analyzer.analyze(trace_session, self.xml_report_path, self.allure_dir)
             logger.info(f"✅ AI 分析完成，分析了 {len(result.get('failed_tests', []))} 個失敗測試")

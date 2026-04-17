@@ -71,7 +71,7 @@ http://localhost:8000/traces/
     ├─ 若有失敗 → 呼叫 AIAnalyzer.analyze()
     │   ├─ ai/report_parser.py: 解析 JUnit XML + Allure JSON
     │   ├─ ai/trace_parser.py: 從 trace.zip 提取截圖 + API 錯誤
-    │   └─ ai/analyzer.py: 組合 prompt → Claude API (vision)
+    │   └─ ai/analyzer.py: 組合 prompt → claude CLI 子程序（Team OAuth）
     └─ 回傳結果 (含 ai_analysis)
         ↓
 [前端] 輪詢 GET /status
@@ -106,21 +106,25 @@ http://localhost:8000/traces/
 }
 ```
 
-#### 環境變數設定
+#### 認證設定（Team OAuth）
+
+AI 分析透過 `claude` CLI 子程序執行，借用 Claude Code Team 的 OAuth 登入身份，**不需要 API Key**。
 
 ```bash
-# 編輯 docker-compose.override.yml，填入你的 Anthropic API Key
-ANTHROPIC_API_KEY=sk-ant-xxxxx
+# 在 Linux 主機（Docker 所在機器）執行一次登入
+claude auth login
 
-# Docker 環境會自動讀取 .env
-docker-compose up -d
+# docker-compose.yml 已掛載 /root/.claude 憑證目錄至容器
+# 重新 build 後即可使用
+docker-compose build
+docker-compose up -d webservice
 ```
 
-若無設定 API Key，則跳過 AI 分析（不影響測試執行）。
+若 `claude` CLI 未安裝或未登入，則跳過 AI 分析（不影響測試執行）。
 
 #### 核心模組
 
-- **ai/analyzer.py**: Claude API 整合，組合 prompt 並解析回應
+- **ai/analyzer.py**: claude CLI 子程序整合，組合 prompt 並解析回應
 - **ai/trace_parser.py**: 從 trace.zip 提取最後截圖（JPEG → base64）和 network log（過濾 4xx/5xx）
 - **ai/report_parser.py**: 解析 JUnit XML 和 Allure JSON，提取失敗測試資訊
 - **webservice/test_runner.py**: 測試完成後自動觸發 AI 分析

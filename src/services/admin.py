@@ -1,15 +1,16 @@
 from src.services.base_service import BaseService
+from src.apicheck.api_client import AdminAuthStrategy
 from src.config import Config
 
 class AdminService(BaseService):
+    auth_strategy_class = AdminAuthStrategy
     def __init__(self, client, base_url):
         super().__init__(client, base_url)
         self.endpoint = f"{base_url}"
 
     def get_menu(self):
         url = f"{self.endpoint}/api/users/menu"
-        response = self.client.get(url)
-        return response
+        return self.client.get(url)
 
     def get_history(self, cat_id, game_type):
         url = f"{self.endpoint}/api/Trader/queryCommHis"
@@ -29,14 +30,12 @@ class AdminService(BaseService):
             "pageSize":1, "CatId":cat_id, "GameType":game_type, "Sort":0,
             "AcqFSites":Config.Testdata.ACQSITE
         }
-        response = self.client.post(url,json=payload)
-        return response
+        return self.client.post(url,json=payload)
 
     def get_report(self):
         url = f"{self.endpoint}/api/rptbill/bill"
         payload = {"AL":"","SiteID":-1}
-        response = self.client.post(url, json=payload)
-        return response
+        return self.client.post(url, json=payload)
 
     def query_order(self):
         url = f"{self.endpoint}/api/ballen/ticketquery"
@@ -44,7 +43,4 @@ class AdminService(BaseService):
             "DateS":Config.Testdata.FORMATTED_DATE+" 00:00","DateE":Config.Testdata.FORMATTED_DATE+" 23:59",
             "SiteID":-1,"Member":"","BetNo":"","EvtID":"","Span":1,"betIP":"","ballType":"-1","wagerType":"-1","RowNum":0
         }
-        response = self.client.post(url, json=payload)
-        return response
-
-
+        return self.client.post(url, json=payload)

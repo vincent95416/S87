@@ -6,7 +6,6 @@ from datetime import datetime
 from playwright.sync_api import Page, BrowserContext, sync_playwright
 
 from src.pages.base_page import BasePage
-from src.apicheck.api_client import APIClient
 from src.apicheck.api_manager import APIManager
 
 # ====================================================================
@@ -170,9 +169,9 @@ def e2e_main_page(e2e_logged_in_page, page):
 # ====================================================================
 
 @pytest.fixture(scope="session")
-def api_client(config):
+def api_manager(config):
     """
-    提供一個未認證的 APIClient 實例
+    提供一個 APIManager 實例，用於 API 測試
     所有環境參數都從 config Fixture (即 .ini 檔案) 中讀取。
     """
     site = config.get('DEFAULT', 'site')
@@ -180,11 +179,7 @@ def api_client(config):
     api_username = config.get(site, 'username')
     api_password = config.get(site, 'password')
 
-    # 實例化 APIClient
-    return APIClient(base_url, api_username, api_password)
-
-@pytest.fixture(scope="session")
-def api_manager(api_client):
-    manager = APIManager(api_client)
-    manager.authenticate()
-    return manager
+    return APIManager(
+        base_url,
+        {"username": api_username, "password": api_password}
+    )

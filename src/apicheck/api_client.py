@@ -25,7 +25,7 @@ class AdminAuthStrategy(AuthStrategy):
         response = session.post(login_url, json=payload, allow_redirects=False, verify=False)
 
         if response.status_code != 200:
-            raise Exception(f"Admin 登入失敗: {response.text}")
+            raise Exception(f"Admin 登入失敗 [status={response.status_code}]: {response.text or '(無回應內容)'}")
 
         if ".AspNetCore.Cookies" not in session.cookies:
             raise Exception("Admin 登入成功但沒有儲存cookies")

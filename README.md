@@ -19,7 +19,7 @@
 | API 測試 | Requests |
 | 報告生成 | Allure |
 | Web 服務 | FastAPI |
-| AI 分析 | Anthropic Claude API (vision) |
+| AI 分析 | Claude Code CLI（Team OAuth） |
 | 容器化 | Docker + Docker Compose |
 
 ## 快速開始
@@ -44,14 +44,11 @@ pytest -m apicheck
 ### Web 控制台部署
 
 ```bash
-# 設定claude api key（資安考量，不納入版控）
-nano docker-compose.override.yml
-# 編輯內容，填入 ANTHROPIC_API_KEY=sk-ant-xxxxx
-services:
-  webservice:
-    environment:
-      - ANTHROPIC_API_KEY=${KEY}
-# 啟動服務
+# 在 Docker 主機執行一次 Claude Code Team 登入（產生 OAuth 憑證）
+claude auth login
+
+# Build 並啟動服務（docker-compose 會自動掛載 ~/.claude 憑證）
+docker-compose build
 docker-compose up -d webservice
 
 # 訪問控制台
@@ -62,7 +59,7 @@ http://localhost:8000
 - 選擇站點、環境執行測試
 - 查看 Allure 報告：`/allure/`
 - 播放 Trace：`/traces/`
-- AI 診斷報告（需設定 API Key）
+- AI 診斷報告（透過 Claude Code Team OAuth，無需 API Key）
 
 ### CI/CD 整合
 

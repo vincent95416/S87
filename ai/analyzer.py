@@ -1,9 +1,11 @@
+import base64
 import json
 import logging
+import os
+import subprocess
+import tempfile
 from datetime import datetime
 from pathlib import Path
-
-import anthropic
 
 from ai.report_parser import parse_allure_failures, parse_junit_failures
 from ai.trace_parser import extract_api_errors, extract_last_screenshot_b64
@@ -18,8 +20,26 @@ SYSTEM_PROMPT = """你是一位資深 QA 自動化工程師，專門分析 E2E �
 
 
 class AIAnalyzer:
-    def __init__(self, api_key: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
+    def __init__(self):
+        pass
+
+    def _call_claude_cli(self, prompt: str, screenshot_b64: str | None = None) -> str:
+        """透過 claude CLI 子程序呼叫，借用 Team OAuth 憑證"""
+        cmd = ["claude", "-p", prompt]
+        tmp_path = None
+        try:
+            if screenshot_b64:
+                with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+                    tmp.write(base64.b64decode(screenshot_b64))
+                    tmp_path = tmp.name
+                cmd.extend(["--image", tmp_path])
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip())
+            return result.stdout.strip()
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     def analyze(
         self,
@@ -80,17 +100,10 @@ class AIAnalyzer:
         else:
             logger.warning(f"  trace session 目錄不存在: {trace_session_dir}")
 
-        messages = self._build_messages(failure, api_errors, screenshot_b64)
+        prompt = self._build_prompt(failure, api_errors)
         try:
-            logger.info(f"  呼叫 Claude API (model=claude-sonnet-4-6)...")
-            response = self.client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1024,
-                system=SYSTEM_PROMPT,
-                messages=messages,
-            )
-            raw = response.content[0].text.strip()
-            logger.info(f"  收到 API 回應，長度: {len(raw)} 字元")
+            logger.info(f"  呼叫 claude CLI...")
+            raw = self._call_claude_cli(prompt, screenshot_b64)
             parsed = json.loads(raw)
             parsed["test_name"] = test_name
             parsed["api_errors"] = api_errors
@@ -108,15 +121,16 @@ class AIAnalyzer:
                 "is_env_issue": False,
             }
 
-    def _build_messages(self, failure: dict, api_errors: list, screenshot_b64: str | None) -> list:
-        api_errors_text = ""
+    def _build_prompt(self, failure: dict, api_errors: list) -> str:
         if api_errors:
             lines = [f"  - [{e['method']}] {e['url']} → HTTP {e['status']}" for e in api_errors[:10]]
             api_errors_text = "API 錯誤（4xx/5xx）：\n" + "\n".join(lines)
         else:
             api_errors_text = "API 錯誤：無"
 
-        prompt_text = f"""請分析以下 E2E 測試失敗，回傳 JSON 格式診斷報告。
+        return f"""{SYSTEM_PROMPT}
+
+請分析以下 E2E 測試失敗，回傳 JSON 格式診斷報告。
 
 測試名稱：{failure['test_name']}
 失敗 Step：{failure.get('failed_step', '未知')}
@@ -134,19 +148,6 @@ Stack Trace（節錄）：
   "suggested_action": "建議的修復或調查方向",
   "is_env_issue": true/false
 }}"""
-
-        content: list = []
-        if screenshot_b64:
-            content.append({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/jpeg",
-                    "data": screenshot_b64,
-                },
-            })
-        content.append({"type": "text", "text": prompt_text})
-        return [{"role": "user", "content": content}]
 
     @staticmethod
     def _find_trace_zip(trace_session_dir: Path, test_name: str) -> Path | None:
