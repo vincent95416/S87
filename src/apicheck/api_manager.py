@@ -30,3 +30,6 @@ class APIManager:
             client = self._build_client(AgentService)
             self._agent = AgentService(client, self.base_url)
         return self._agent
+
+    def reset_agent_client(self):
+        self._agent = None

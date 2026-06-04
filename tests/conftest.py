@@ -21,11 +21,16 @@ def test_report(item, call):
     setattr(item, f"rep_{rep.when}", rep)
 
 @pytest.fixture(scope="function", autouse=True)
-def trace_handler(request, context, trace_session_dir):
+def trace_handler(request, trace_session_dir):
     """
     自動處理每個測試的 trace 錄製（autouse=True 表示自動應用到所有測試）
     """
-    # 測試開始前：啟動 trace chunk
+    # 非 e2e 測試（如 API 測試）不啟動 trace，也不初始化瀏覽器 context
+    if not request.node.get_closest_marker("e2e"):
+        yield
+        return
+
+    context = request.getfixturevalue("context")
     context.tracing.start_chunk()
 
     yield

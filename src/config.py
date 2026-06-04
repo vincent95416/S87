@@ -4,12 +4,15 @@ import random
 class Config:
 
     class Testdata:
+        # ag用
+        ag_account = "a366"         #代理
+        up_account = "a533"         #總代理
+        transfer_member = "a1125"   #額轉測試帳號
+        # ssapi用
         ssapi_url = "https://ssapi.supers168.com"
         ssapi_vendor = "d5235"
         ssapi_sign = "F6D2E6EC20EBFC9EDEB38985462A84FC"
-        ssapi_account = "a366"
-        ssapi_up_account = "a533"
-        ssapi_account = random.randint
+        ssapi_upaccount = "d3689"
 
         ACQSITE = ["0", "TX", "KU", "CTX", "PIN", "SB", "PM", "DB_ESPORT", "BET365", "188BET", "1XBET"]
 
