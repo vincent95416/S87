@@ -10,7 +10,6 @@ services:
       - /home/ssport/test_traces:/app/traces
       - ./dashboard.html:/app/dashboard.html
       - ./webservice:/app/webservice
-      - /root/.claude:/root/.claude:ro   # 掛載 Team OAuth 憑證（唯讀）
     command: python -m uvicorn webservice.main:app --host 0.0.0.0 --port 8000
     restart: always                # 確保 Web 服務掛了會自動重啟
 
@@ -19,7 +18,6 @@ services:
     image: test-image:latest  # 直接用上面 build 好的，不用重新 build
     volumes:
       - /home/ssport/test_output:/app/reports     # 寫入同一個抽屜
-      - /root/.claude:/root/.claude:ro   # 掛載 Team OAuth 憑證（唯讀）
     # 這裡放你原本跑測試的完整指令
     command: pytest -m apicheck --html=reports/cicd_report.html --self-contained-html
     profiles:

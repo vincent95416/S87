@@ -31,9 +31,9 @@ class BettingRecordPage(BasePage):
     @staticmethod
     @allure.step("取得管端驗證")
     def get_agent_session(config: ConfigParser):
-        base_url = config.get('ag', 'base_url')
-        username = config.get('ag', 'username')
-        password = config.get('ag', 'password')
+        base_url = config.get('agent', 'base_url')
+        username = config.get('agent', 'username')
+        password = config.get('agent', 'password')
 
         session = requests.Session()
         session.verify =False
@@ -69,9 +69,9 @@ class BettingRecordPage(BasePage):
     @staticmethod
     @allure.step("取得控端驗證")
     def get_controller_session(config: ConfigParser):
-        base_url = config.get('ct', 'base_url')
-        username = config.get('ct', 'username')
-        password = config.get('ct', 'password')
+        base_url = config.get('admin', 'base_url')
+        username = config.get('admin', 'username')
+        password = config.get('admin', 'password')
 
         session = requests.Session()
         payload = {

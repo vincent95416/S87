@@ -9,4 +9,3 @@ pytest-playwright
 configparser
 pytest-html
 pytest-order
-anthropic>=0.40.0

@@ -82,7 +82,7 @@ def test_betting(e2e_main_page: Page, config):
         assert betting_payout == record_payout, f"bet: {betting_payout}, record: {record_payout}"
         ticket_id = record_page.extract_record_ticket()
     with allure.step("驗證管端注單查詢"):
-        ag_base_url = config.get('ag', 'base_url')
+        ag_base_url = config.get('agent', 'base_url')
         ag_session = BettingRecordPage.get_agent_session(config)
         ag_payload = {"ticketid": ticket_id}
         ag_response = ag_session.post(url=f"{ag_base_url}/bill/billTicketQ", data=ag_payload)
@@ -91,7 +91,7 @@ def test_betting(e2e_main_page: Page, config):
         assert len(ag_response_json['Data']) > 0, "管端注單搜尋的Data List為空"
         assert str(ag_response_json['Data'][0]['TicketID']) == ticket_id, f"注單 :{ticket_id}無法在管端查詢到"
     with allure.step("驗證控端注單查詢"):
-        ct_base_url = config.get('ct', 'base_url')
+        ct_base_url = config.get('admin', 'base_url')
         ct_session = BettingRecordPage.get_controller_session(config)
         ct_payload = {"RptDate":"TDate","Status":"Y","finish":"0","DateS":Config.Testdata.FORMATTED_DATE,"DateE":Config.Testdata.TOMORROW,"SiteID":-1,"BetNo":ticket_id,"Span":1}
         ct_response = ct_session.post(url=f"{ct_base_url}/api/ballen/ticketquery", json=ct_payload)

@@ -55,81 +55,6 @@ http://localhost:8000/traces/
 
 ## Architecture
 
-### AI-Powered Error Analysis
-
-測試失敗時自動觸發 Claude API 分析，整合三種資料來源產出診斷報告。
-
-#### 完整流程（前端到後端）
-
-```
-[前端] dashboard.html
-    ↓ POST /api/tests/regression
-[後端] webservice/main.py
-    ↓ BackgroundTasks
-[執行器] webservice/test_runner.py
-    ├─ 執行 pytest (生成 XML/JSON/Trace)
-    ├─ 若有失敗 → 呼叫 AIAnalyzer.analyze()
-    │   ├─ ai/report_parser.py: 解析 JUnit XML + Allure JSON
-    │   ├─ ai/trace_parser.py: 從 trace.zip 提取截圖 + API 錯誤
-    │   └─ ai/analyzer.py: 組合 prompt → claude CLI 子程序（Team OAuth）
-    └─ 回傳結果 (含 ai_analysis)
-        ↓
-[前端] 輪詢 GET /status
-    └─ 渲染 AI 診斷卡片
-```
-
-#### 資料來源
-
-| 來源 | 路徑 | 提取內容 |
-|------|------|----------|
-| JUnit XML | `reports/results.xml` | 失敗測試名稱、error message、stack trace |
-| Allure JSON | `reports/allure-results/*-result.json` | 失敗的 step、duration |
-| Playwright Trace | `traces/{session}/{test_name}.zip` | 最後截圖（base64）、API 錯誤（4xx/5xx） |
-
-#### AI 分析輸出格式
-
-```json
-{
-  "analyzed_at": "2026-03-19T10:00:00",
-  "failed_tests": [
-    {
-      "test_name": "test_betting",
-      "root_cause": "投注後等待「交易成功」文字逾時 15s",
-      "category": "TIMEOUT",
-      "api_errors": [{"url": "/api/bet", "status": 500}],
-      "last_screenshot_desc": "投注確認彈窗仍顯示，未出現成功訊息",
-      "suggested_action": "檢查 /api/bet 回應是否正常，或增加 timeout 值",
-      "is_env_issue": true
-    }
-  ],
-  "summary": "1 個測試失敗，疑似後端 API 回應異常"
-}
-```
-
-#### 認證設定（Team OAuth）
-
-AI 分析透過 `claude` CLI 子程序執行，借用 Claude Code Team 的 OAuth 登入身份，**不需要 API Key**。
-
-```bash
-# 在 Linux 主機（Docker 所在機器）執行一次登入
-claude auth login
-
-# docker-compose.yml 已掛載 /root/.claude 憑證目錄至容器
-# 重新 build 後即可使用
-docker-compose build
-docker-compose up -d webservice
-```
-
-若 `claude` CLI 未安裝或未登入，則跳過 AI 分析（不影響測試執行）。
-
-#### 核心模組
-
-- **ai/analyzer.py**: claude CLI 子程序整合，組合 prompt 並解析回應
-- **ai/trace_parser.py**: 從 trace.zip 提取最後截圖（JPEG → base64）和 network log（過濾 4xx/5xx）
-- **ai/report_parser.py**: 解析 JUnit XML 和 Allure JSON，提取失敗測試資訊
-- **webservice/test_runner.py**: 測試完成後自動觸發 AI 分析
-- **dashboard.html**: 前端輪詢 `/status`，渲染 AI 診斷卡片（category badge、root_cause、suggested_action）
-
 ### Multi-Site Structure
 
 The framework supports multiple test targets with isolated Page Object Models:
@@ -162,9 +87,9 @@ The framework supports multiple test targets with isolated Page Object Models:
 ### API Testing Architecture
 
 - **APIClient** (`src/apicheck/api_client.py`): Base HTTP client with authentication
-- **APIManager** (`src/apicheck/api_manager.py`): Lazy-loads service instances (AdminService, AgentService)
+- **APIManager** (`src/apicheck/api_manager.py`): Lazy-loads service instances (AdminService, AgentService)。每個 service 從 config 對應 section（`[admin]`、`[agent]`）各自讀 `base_url` 與帳密，service 之間互相獨立
 - **Service classes** (`src/services/`): Inherit from `BaseService`, encapsulate API endpoints
-- **Fixtures**: `api_client` and `api_manager` fixtures provide authenticated clients to tests
+- **Fixture**: `api_manager` fixture 直接吃整個 config 物件並回傳 APIManager。**apicheck 不受 `--site` 影響**——`--site` 只用於 e2e 站點切換
 
 ### Key Design Patterns
 
@@ -178,18 +103,35 @@ The framework supports multiple test targets with isolated Page Object Models:
 
 ### Environment Files (`env/*.ini`)
 
+兩種類型的 section：
+
 ```ini
-[site_name]
-base_url = https://example.com
+# e2e 用：以前端網站為單位
+[new20]
+base_url = https://supers168.com
 username = test_user
 password = test_pass
+
+[spg]
+base_url = ...
+
+# apicheck 用：以後端服務為單位（不受 --site 影響）
+[admin]
+base_url = https://ct.supers168.com
+username = ...
+password = ...
+
+[agent]
+base_url = https://ag.supers168.com
+username = ...
+password = ...
 ```
 
 ### Pytest Configuration (`pytest.ini`)
 
 - Default options: `-s -ra --html --junitxml --alluredir`
 - Markers: `e2e` (UI tests), `apicheck` (API tests)
-- Default env: `uat`, default site: `ct`
+- Default env: `uat`, default site: `ag`（**注意**：此預設值是歷史遺留，目前沒有對應的 `src/pages/ag/` POM，e2e 執行時請明確指定 `--site=new20` 或 `--site=spg`）
 
 ## Adding New Test Sites
 

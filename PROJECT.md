@@ -4,11 +4,11 @@
 
 ## 核心設計理念
 
-1. **站點隔離**: 每個測試目標（new20/spg/ct）獨立 Page Object 與配置
-2. **Fixture 分層**: Session 級別共享登入狀態，Function 級別處理 Trace
-3. **失敗即錄**: Trace 只在測試失敗時保存，節省儲存空間
-4. **Web 驅動**: FastAPI 提供 RESTful API 觸發測試與查看結果
-5. **AI 智能診斷**: 測試失敗時自動整合多源資料（截圖、API 錯誤、stack trace）呼叫 Claude API 分析根因
+1. **站點隔離**: 每個 e2e 測試目標（new20/spg）獨立 Page Object 與配置
+2. **服務 vs 站點分離**: apicheck 以「後端服務」為單位（admin/agent），不受 e2e `--site` 影響；env ini 檔同時存在 `[new20]`/`[spg]` 等站點 section 與 `[admin]`/`[agent]` 服務 section
+3. **Fixture 分層**: Session 級別共享登入狀態，Function 級別處理 Trace
+4. **失敗即錄**: Trace 只在測試失敗時保存，節省儲存空間
+5. **Web 驅動**: FastAPI 提供 RESTful API 觸發測試與查看結果
 
 ## 完整目錄結構
 
@@ -40,18 +40,12 @@
 │   │
 │   ├── apicheck/                 # API 測試模組
 │   │   ├── api_client.py        # HTTP 請求封裝
-│   │   └── api_manager.py       # 業務邏輯管理（登入、Token 等）
+│   │   └── api_manager.py       # Service Lazy-Build：section → service 映射
 │   │
 │   └── services/                 # API 服務層（高階封裝）
 │       ├── base_service.py
 │       ├── admin.py
 │       └── agent.py
-│
-├── ai/                           # AI 錯誤分析模組
-│   ├── __init__.py
-│   ├── analyzer.py               # claude CLI 子程序整合，組合 prompt 並解析回應
-│   ├── trace_parser.py           # 從 trace.zip 提取截圖與 network log
-│   └── report_parser.py          # 解析 JUnit XML 和 Allure JSON
 │
 ├── tests/
 │   ├── conftest.py               # 核心 Fixtures（詳見下節）
@@ -65,11 +59,12 @@
 │   │   └── test_spg_lobby.py
 │   │
 │   └── apicheck/
-│       └── test_admin.py
+│       ├── test_admin.py
+│       └── test_agent.py
 │
 ├── webservice/                   # Web 控制台後端
 │   ├── main.py                  # FastAPI 應用（API 路由）
-│   ├── test_runner.py           # Pytest 執行器封裝 + AI 分析觸發
+│   ├── test_runner.py           # Pytest 執行器封裝
 │   ├── lock_manager.py          # 並發鎖管理（防止同時執行）
 │   └── models.py                # Pydantic 模型定義
 │
@@ -90,7 +85,7 @@
 ```
 config (session)
     │
-    ├─> api_client (session) ──> api_manager (session)
+    ├─> api_manager (session)   # 內部 lazy-build AdminService / AgentService
     │
     └─> context (session) ──> page (session)
             │
@@ -128,10 +123,10 @@ config (session)
 - 動態載入對應站點的 LoginPage（透過 importlib）
 - spg 站點在 `tests/spg/conftest.py` 中覆寫此 Fixture
 
-**6. api_client / api_manager** (tests/conftest.py)
-- API 測試專用 Fixtures
-- `api_client`: 封裝 HTTP 請求（requests）
-- `api_manager`: 業務邏輯層（處理登入、Token 管理等）
+**6. api_manager** (tests/conftest.py)
+- API 測試專用 Fixture，直接傳入整個 `config` 物件
+- APIManager 內部 lazy-build `.admin` / `.agent`，各自從 ini 的 `[admin]`、`[agent]` section 讀 `base_url` 和帳密
+- **不受 `--site` 影響**：apicheck 跟 e2e 的「站點」概念解耦
 
 ## 設計模式
 
@@ -210,21 +205,33 @@ class APIClient:
 
 # src/apicheck/api_manager.py
 class APIManager:
-    def __init__(self, client: APIClient):
-        self.client = client
+    """每個 service 從 config 對應 section 各自讀 base_url 和帳密"""
+    def __init__(self, config):
+        self.config = config
+        self._admin = None
+        self._agent = None
 
-    def authenticate(self):
-        return self.client.authenticate()
+    def _build_service(self, service_class, section):
+        base_url = self.config.get(section, "base_url")
+        credentials = {
+            "username": self.config.get(section, "username"),
+            "password": self.config.get(section, "password"),
+        }
+        strategy = service_class.auth_strategy_class()
+        client = APIClient(base_url, strategy, credentials)
+        client.authenticate()
+        return service_class(client, base_url)
 
     @property
     def admin(self):
-        return AdminService(self.client, self.client.base_url)
+        if self._admin is None:
+            self._admin = self._build_service(AdminService, "admin")
+        return self._admin
 
 # tests/apicheck/test_admin.py
-def test_admin_login(api_manager):
-    api_manager.authenticate()
-    result = api_manager.admin.get_user_list()
-    assert result is not None
+def test_menu(api_manager):
+    response = api_manager.admin.get_menu()  # 第一次存取才登入 + 建 client
+    assert response.status_code == 200
 ```
 
 ### 3. Trace 錄製機制
@@ -255,7 +262,7 @@ def test_report(item, call):
 | 端點 | 方法 | 功能 |
 |------|------|------|
 | `/` | GET | Dashboard 頁面 |
-| `/status` | GET | 取得執行狀態（含 ai_analysis） |
+| `/status` | GET | 取得執行狀態 |
 | `/api/tests/regression` | POST | 觸發測試 |
 | `/api/traces/sessions` | GET | 列出所有 Trace Sessions |
 | `/api/traces/{session}/{name}` | GET | 下載特定 Trace |
@@ -264,30 +271,6 @@ def test_report(item, call):
 | `/static/*` | GET | 靜態檔案（reports 目錄） |
 | `/traces/*` | GET | Trace 檔案靜態存取 |
 | `/allure/*` | GET | Allure 報告靜態檔案 |
-
-### AI 錯誤分析流程
-
-```
-[前端] dashboard.html
-    ↓ POST /api/tests/regression
-[後端] webservice/main.py
-    ↓ BackgroundTasks
-[執行器] webservice/test_runner.py
-    ├─ 執行 pytest (生成 XML/JSON/Trace)
-    ├─ 若有失敗 → 呼叫 AIAnalyzer.analyze()
-    │   ├─ ai/report_parser.py: 解析 JUnit XML + Allure JSON
-    │   ├─ ai/trace_parser.py: 從 trace.zip 提取截圖 + API 錯誤
-    │   └─ ai/analyzer.py: 組合 prompt → claude CLI 子程序（Team OAuth）
-    └─ 回傳結果 (含 ai_analysis)
-        ↓
-[前端] 輪詢 GET /status
-    └─ 渲染 AI 診斷卡片（category、root_cause、suggested_action）
-```
-
-**關鍵實作**：
-- `test_runner.py` 在測試完成後檢查 `summary["failed"] > 0`，若有失敗則觸發 AI 分析
-- `analyzer.py` 透過 `claude -p` CLI 子程序執行分析，借用 Team OAuth 憑證（掛載自 `/root/.claude`）
-- AI 分析結果加入 `latest_test_result["ai_analysis"]`，透過 `/status` 端點回傳前端
 
 ### 並發控制
 
@@ -410,19 +393,29 @@ def e2e_logged_in_page(page: Page, config):
 
 ### 新增 API 測試
 
-**1. 定義 API Client 方法**
+API 測試走「APIManager → service (admin/agent) → 方法」三層。要新增一支 API：
+
+**1. 在對應 service 加方法**
 ```python
-# src/apicheck/api_manager.py
-def create_user(self, data):
-    return self.client.post('/users', data)
+# src/services/agent.py
+class AgentService(BaseService):
+    def create_user(self, data):
+        url = f"{self.endpoint}/users"
+        return self.client.post(url, data=data)
 ```
+
+若要新增整個服務（例如 `report`），步驟為：
+- `src/services/report.py` 繼承 `BaseService`，並指定 `auth_strategy_class`
+- `src/apicheck/api_manager.py` 加上 `report` property，呼叫 `_build_service(ReportService, "report")`
+- `env/{env}.ini` 補上 `[report]` section（base_url / username / password）
 
 **2. 編寫測試**
 ```python
-# tests/apicheck/test_users.py
+# tests/apicheck/test_agent.py
+@pytest.mark.apicheck
 def test_create_user(api_manager):
-    response = api_manager.create_user({"name": "Test"})
-    assert response['id'] is not None
+    response = api_manager.agent.create_user({"name": "Test"})
+    assert response.status_code == 200
 ```
 
 ## 最佳實踐
@@ -444,17 +437,11 @@ def test_create_user(api_manager):
 ### 4. Trace 管理
 - **定期清理**: Trace 檔案會累積，建議定期刪除舊 Session
 - **關鍵測試**: 重要流程測試失敗時優先查看 Trace
-- **AI 輔助分析**: 失敗測試會自動提取 Trace 中的截圖與 API 錯誤，送交 Claude 分析根因
-
-### 5. AI 分析最佳實踐
-- **Team OAuth 認證**: 在 Docker 主機執行 `claude auth login`，docker-compose 掛載 `/root/.claude` 至容器，無需管理 API Key
-- **失敗容錯**: AI 分析失敗不影響測試執行，確保主流程穩定
-- **結果解讀**: AI 提供的 `category` 分類可作為初步參考，`is_env_issue` 為 `true` 時優先排查環境問題
 
 ### 5. CI/CD 整合
 - **獨立報告**: CI 環境的報告路徑與本地分開
-- **錯誤通知**: 測試失敗時通知 Slack/Email（可整合 AI 診斷摘要）
-- **Artifacts 保存**: 報告、Trace 與 AI 分析結果作為 GitLab Artifacts 上傳
+- **錯誤通知**: 測試失敗時通知 Slack/Email
+- **Artifacts 保存**: 報告與 Trace 作為 CI Artifacts 上傳
 
 ## 常見問題
 
@@ -470,23 +457,23 @@ A: 修改 `trace_handler` Fixture，移除 `if test_failed` 判斷即可。
 **Q: Web 服務的測試執行是同步還是異步？**
 A: 異步。透過 `BackgroundTasks` 在背景執行，API 立即回傳 `accepted` 狀態。
 
-**Q: AI 分析需要多久時間？**
-A: 通常 5-15 秒，取決於失敗測試數量與 Claude API 回應速度。分析在背景執行，不阻塞測試流程。
+**Q: 為什麼 apicheck 不受 `--site` 影響？**
+A: apicheck 測的是「後端服務」（admin、agent），不是「前端站點」。`api_manager` fixture 直接吃整個 config，admin/agent 各自從 ini 的 `[admin]`、`[agent]` section 讀 base_url 和帳密。`--site` 只用於 e2e 站點切換。
 
-**Q: Docker 主機沒有執行 `claude auth login` 會怎樣？**
-A: 測試正常執行，只是跳過 AI 分析，`ai_analysis` 欄位為 `null`。
+**Q: 在新環境（例如 dev）跑 apicheck 失敗、噴 `NoOptionError` 怎麼辦？**
+A: 那個 env 的 ini 檔還沒填 `[admin]` / `[agent]` section 的內容。補上 base_url、username、password 就好。
 
 ## 技術債務與未來改進
 
 - [ ] 支援並行測試（Pytest-xdist）
 - [ ] Trace 自動過期清理機制
 - [ ] Web 服務新增測試排程功能
-- [ ] 整合 Slack 通知（測試完成/失敗 + AI 診斷摘要）
+- [ ] 整合 Slack 通知（測試完成/失敗）
 - [ ] 支援 Allure Report 在 Web 介面直接查看
-- [ ] AI 分析結果持久化（儲存至資料庫，支援歷史查詢）
-- [ ] 手動重新分析指定 session 的 trace（`GET /api/ai/analyze/{session_id}`）
+- [ ] `src/pages/new20/betting_record_page.py:57` 硬寫死 `https://ag.supers168.com/Home/Authenticate`，應改為從 `base_url` 組合
+- [ ] `src/config.py` 的 `Config.Testdata.ssapi_*` 為 uat 專用 hardcode，跨環境跑 ssapi 測試前需搬進 `env/*.ini`
 
 ---
 
 **維護者**: V
-**更新日期**: 2026-03-23
+**更新日期**: 2026-06-15

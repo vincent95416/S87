@@ -511,71 +511,6 @@
             animation: slideOut 0.3s ease-in forwards;
         }
 
-        /* AI 分析樣式 */
-        .ai-analysis {
-            background: #f0f9ff;
-            border: 2px solid #0ea5e9;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .ai-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-            color: #0369a1;
-            margin-bottom: 12px;
-            font-size: 15px;
-        }
-
-        .ai-summary {
-            background: white;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            color: #374151;
-            font-size: 14px;
-        }
-
-        .failed-test-item {
-            background: white;
-            border-left: 3px solid #ef4444;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .test-name {
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 8px;
-        }
-
-        .ai-field {
-            margin: 6px 0;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .ai-field strong {
-            color: #4b5563;
-            display: inline-block;
-            min-width: 80px;
-        }
-
-        .category-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -983,38 +918,6 @@
             const failed = summary.failed || 0;
             const duration = result.duration || 0;
 
-            // AI 分析區塊
-            let aiAnalysisHtml = '';
-            if (result.ai_analysis) {
-                const ai = result.ai_analysis;
-                aiAnalysisHtml = `
-                    <div class="ai-analysis">
-                        <div class="ai-header">
-                            🤖 AI 診斷報告
-                        </div>
-                        <div class="ai-summary">
-                            ${ai.summary || '無摘要'}
-                        </div>
-                        ${ai.failed_tests && ai.failed_tests.length > 0 ? ai.failed_tests.map(test => `
-                            <div class="failed-test-item">
-                                <div class="test-name">${test.test_name}</div>
-                                <div class="ai-field">
-                                    <strong>原因：</strong>${test.root_cause}
-                                </div>
-                                <div class="ai-field">
-                                    <strong>類型：</strong><span class="category-badge">${test.category}</span>
-                                </div>
-                                ${test.last_screenshot_desc ? `<div class="ai-field"><strong>截圖：</strong>${test.last_screenshot_desc}</div>` : ''}
-                                <div class="ai-field">
-                                    <strong>建議：</strong>${test.suggested_action}
-                                </div>
-                                ${test.is_env_issue ? '<div class="ai-field" style="color: #dc2626;">⚠️ 疑似環境問題</div>' : ''}
-                            </div>
-                        `).join('') : ''}
-                    </div>
-                `;
-            }
-
             document.getElementById('currentResult').innerHTML = `
                 <div class="result-panel">
                     <div class="result-item ${statusClass}">
@@ -1028,7 +931,6 @@
                         </div>
                         ${links.length > 0 ? `<div class="result-links">${links.join('')}</div>` : ''}
                     </div>
-                    ${aiAnalysisHtml}
                 </div>
             `;
         }

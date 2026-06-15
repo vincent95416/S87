@@ -1,11 +1,10 @@
 import pytest
 from src.config import Config
-from itertools import product
 
 ACCOUNTS = {
     "sub":      {"username": "a3666", "password": "qwer1234"},  #subagent子代理
     "invalid_2": {"username": "a366",  "password": "test1234"}, #下層
-    "wrong_pw": {"username": "a366",   "password": "!@#$"},     #錯誤密碼
+    "wrong_pw": {"username": "a953",   "password": "!@#$"},     #錯誤密碼
 }
 
 TOGGLE_ACCOUNTS = {
@@ -25,16 +24,60 @@ def disabled_account(api_manager):
 @pytest.mark.apicheck
 def test_transfer(api_manager):
     response_in = api_manager.agent.add_cash(1)
-    assert response_in.status_code == 200, f"addCash +1 HTTP {response_in.status_code}: {response_in.text[:300]}"
-    assert response_in.json()["Status"] == 0, f"addCash +1 回應: {response_in.text[:300]}"
+    assert response_in.status_code == 200
+    assert response_in.json()["Status"] == 0
     response_out = api_manager.agent.add_cash(-1)
-    assert response_out.status_code == 200, f"addCash -1 HTTP {response_out.status_code}: {response_out.text[:300]}"
-    assert response_out.json()["Status"] == 0, f"addCash -1 回應: {response_out.text[:300]}"
+    assert response_out.status_code == 200
+    assert response_out.json()["Status"] == 0
 
 @pytest.mark.apicheck
 def test_subadmin(api_manager):
     api_manager.agent.add_subadmin()
     api_manager.agent.del_subadmin()
+
+
+@pytest.mark.apicheck
+def test_ssapi_create(api_manager):
+    user = api_manager.agent.ss_create_user()
+    response = api_manager.agent.query_member(user)
+    assert response['Status'] == 1
+    assert response['Message'] == "操作成功"
+    assert response['Data']['MemID'] == user
+    assert response['Data']['arylv'] == [Config.Testdata.ssapi_vendor, Config.Testdata.ssapi_upaccount]
+
+@pytest.mark.apicheck
+def test_level_data_query(api_manager):
+    member_id = api_manager.agent.add_member()
+    response = api_manager.agent.del_member(member_id)
+    assert response.json()['Status'] == 3
+    query_res = api_manager.agent.query_level_data()
+    assert query_res.json()['draw'] == 1
+
+@pytest.mark.apicheck
+def test_query_game(api_manager):
+    response = api_manager.agent.query_game()
+    assert response.status_code == 200
+    assert 'L' in response.json()
+
+@pytest.mark.apicheck
+def test_query_bill(api_manager):
+    response = api_manager.agent.query_bill()
+    assert response.status_code == 200
+    response_type = api_manager.agent.query_billType()
+    assert response_type.status_code == 200
+    assert 'Data' in response_type.json()
+    response_game = api_manager.agent.query_billGame()
+    assert response_game.status_code == 200
+    assert 'Data' in response_game.json()
+    response_alert = api_manager.agent.query_billAlert()
+    assert response_alert.status_code == 200
+    assert 'Data' in response_alert.json()
+    response_cancel = api_manager.agent.query_billCancel()
+    assert response_cancel.status_code == 200
+    assert 'Data' in response_cancel.json()
+    response_pending = api_manager.agent.query_billPending()
+    assert response_pending.status_code == 200
+    assert 'Data' in response_pending.json()
 
 @pytest.mark.apicheck
 def test_login_success(api_manager):
@@ -65,11 +108,7 @@ def test_login_wrong_password(api_manager):
     assert response.json()["msg"] in ["【登入密碼錯誤】第1/3次，連續錯誤將會鎖定帳號", "【登入密碼錯誤】第2/3次，連續錯誤將會鎖定帳號", "【登入密碼錯誤】第3/3次，連續錯誤將會鎖定帳號", "帳號已被鎖定，請管理員!"]
 
 @pytest.mark.apicheck
-def test_ssapi_create(api_manager):
-    user = api_manager.agent.ss_create_user()
-    response = api_manager.agent.query_member(user)
-    assert response['Status'] == 1
-    assert response['Message'] == "操作成功"
-    assert response['Data']['MemID'] == user
-    assert response['Data']['arylv'] == [Config.Testdata.ssapi_vendor, Config.Testdata.ssapi_upaccount]
-
+def test_kickout(api_manager):
+    response = api_manager.agent.kickout_member('superag')
+    assert response.status_code == 200
+    assert response.json()["Status"] == 1

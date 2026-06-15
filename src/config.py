@@ -8,7 +8,7 @@ class Config:
         ag_account = "a366"         #代理
         up_account = "a533"         #總代理
         transfer_member = "a1125"   #額轉測試帳號
-        # ssapi用
+        # ssapi(uat)用
         ssapi_url = "https://ssapi.supers168.com"
         ssapi_vendor = "d5235"
         ssapi_sign = "F6D2E6EC20EBFC9EDEB38985462A84FC"

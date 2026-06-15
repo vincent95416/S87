@@ -5,9 +5,9 @@
 ## 核心功能
 
 - **多站點架構**: 支援多個測試目標，獨立 Page Object Models
+- **服務/站點分離**: apicheck 以「後端服務」（admin、agent）為單位，與 e2e 的「前端站點」（new20、spg）解耦
 - **Web 控制台**: 透過瀏覽器觸發測試、查看 Allure 報告、播放 Trace
 - **失敗追蹤**: 自動錄製失敗測試的 Playwright Trace
-- **AI 智能診斷**: 測試失敗時自動分析錯誤原因（整合截圖、API 錯誤、stack trace），提供根因與修復建議
 - **CI/CD 整合**: Docker Compose 支援自動化流程
 
 ## 技術棧
@@ -19,7 +19,6 @@
 | API 測試 | Requests |
 | 報告生成 | Allure |
 | Web 服務 | FastAPI |
-| AI 分析 | Claude Code CLI（Team OAuth） |
 | 容器化 | Docker + Docker Compose |
 
 ## 快速開始
@@ -44,10 +43,7 @@ pytest -m apicheck
 ### Web 控制台部署
 
 ```bash
-# 在 Docker 主機執行一次 Claude Code Team 登入（產生 OAuth 憑證）
-claude auth login
-
-# Build 並啟動服務（docker-compose 會自動掛載 ~/.claude 憑證）
+# Build 並啟動服務
 docker-compose build
 docker-compose up -d webservice
 
@@ -59,7 +55,6 @@ http://localhost:8000
 - 選擇站點、環境執行測試
 - 查看 Allure 報告：`/allure/`
 - 播放 Trace：`/traces/`
-- AI 診斷報告（透過 Claude Code Team OAuth，無需 API Key）
 
 ### CI/CD 整合
 
@@ -94,7 +89,6 @@ password = test_pass
 │   ├── pages/        # Page Object Models
 │   ├── apicheck/     # API 測試客戶端
 │   └── services/     # API 服務封裝
-├── ai/               # AI 錯誤分析模組
 ├── tests/            # 測試案例
 ├── webservice/       # Web 控制台後端
 ├── reports/          # 測試報告輸出

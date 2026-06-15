@@ -176,15 +176,6 @@ def e2e_main_page(e2e_logged_in_page, page):
 @pytest.fixture(scope="session")
 def api_manager(config):
     """
-    提供一個 APIManager 實例，用於 API 測試
-    所有環境參數都從 config Fixture (即 .ini 檔案) 中讀取。
+    APIManager 直接吃整個 config，每個 service 自己讀對應 section。
     """
-    site = config.get('DEFAULT', 'site')
-    base_url = config.get(site, "base_url")
-    api_username = config.get(site, 'username')
-    api_password = config.get(site, 'password')
-
-    return APIManager(
-        base_url,
-        {"username": api_username, "password": api_password}
-    )
+    return APIManager(config)
