@@ -19,7 +19,6 @@
 ├── requirements.txt              # Python 依賴
 ├── docker-compose.yml            # Web 服務 + CI Tester 雙角色
 ├── Dockerfile                    # 容器映像定義
-├── dashboard.html                # Web 控制台前端（測試執行介面）
 │
 ├── env/                          # 環境配置
 │   ├── dev.ini
@@ -62,11 +61,15 @@
 │       ├── test_admin.py
 │       └── test_agent.py
 │
-├── webservice/                   # Web 控制台後端
+├── webservice/                   # Web 控制台（後端 + 前端資產）
 │   ├── main.py                  # FastAPI 應用（API 路由）
 │   ├── test_runner.py           # Pytest 執行器封裝
 │   ├── lock_manager.py          # 並發鎖管理（防止同時執行）
-│   └── models.py                # Pydantic 模型定義
+│   ├── models.py                # Pydantic 模型定義
+│   └── static/                  # 前端資產（透過 /assets 對外服務）
+│       ├── dashboard.html       # Web 控制台主頁
+│       ├── dashboard.css
+│       └── dashboard.js
 │
 ├── reports/                      # 測試報告輸出
 │   ├── allure-results/          # Allure JSON 原始資料
@@ -269,6 +272,7 @@ def test_report(item, call):
 | `/api/reports/html` | GET | 取得 HTML 報告 |
 | `/api/reports/allure` | GET | 取得 Allure 報告連結 |
 | `/static/*` | GET | 靜態檔案（reports 目錄） |
+| `/assets/*` | GET | 前端資產（`webservice/static/` 目錄） |
 | `/traces/*` | GET | Trace 檔案靜態存取 |
 | `/allure/*` | GET | Allure 報告靜態檔案 |
 

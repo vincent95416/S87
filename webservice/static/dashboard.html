@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2E 測試控制台</title>
+    <link rel="stylesheet" href="/assets/dashboard.css">
+</head>
+<body>
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎯 測試控制台</h1>
+            <p>選擇項目並執行測試</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot idle" id="statusDot"></div>
+                <span id="statusText">系統閒置中</span>
+            </div>
+            <div class="toolbar-buttons">
+                <button class="btn btn-outline" onclick="window.open('/api/reports/html', '_blank')">
+                    📊 HTML 報告
+                </button>
+                <button class="btn btn-primary" style="background: #ff5a5f; border: none;" onclick="viewAllure()">
+                    📊 Allure 報表
+                </button>
+                <button class="btn btn-secondary" onclick="checkStatus()">更新狀態</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- 測試執行面板 -->
+            <div class="card">
+                <h2>執行測試</h2>
+
+                <div class="test-selector">
+                    <label>測試案例</label>
+                    <select id="testCase">
+                        <option value="regression">迴歸測試</option>
+                        <option value="maintain_check">維護轉導檢查</option>
+                    </select>
+                </div>
+
+                <div class="test-selector">
+                    <label>環境</label>
+                    <select id="env">
+                        <option value="uat">使用者驗收環境 (UAT)</option>
+                        <option value="dev">開發環境 (DEV)</option>
+                    </select>
+                </div>
+
+                <div class="test-selector">
+                    <label>站點</label>
+                    <select id="site">
+                        <option value="new20">2.0</option>
+                        <option value="hr2222">Stage現金站(hr2222)</option>
+                        <option value="hr5555">StageApi站(hr5555)</option>
+                        <option value="spg">SPG(未開發)</option>
+                    </select>
+                </div>
+
+                <div class="test-selector">
+                    <label>自訂帳號 (選填)</label>
+                    <input type="text" id="username" placeholder="留空使用預設帳號">
+                </div>
+
+                <div class="test-selector">
+                    <label>自訂密碼 (選填)</label>
+                    <input type="password" id="password" placeholder="留空使用預設密碼">
+                </div>
+
+                <div class="test-buttons">
+                    <button class="btn btn-primary" onclick="runTest()" id="runBtn">
+                        ▶️ 執行測試
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearResults()">
+                        🗑️ 清除結果
+                    </button>
+                </div>
+
+                <div id="currentResult"></div>
+            </div>
+
+            <!-- 測試歷史面板 -->
+            <div class="card">
+                <h2>測試歷史</h2>
+                <div class="history-list" id="historyList">
+                    <p style="text-align: center; color: #9ca3af; padding: 40px;">
+                        尚無測試記錄
+                    </p>
+                </div>
+            </div>
+
+            <!-- Trace Viewer 面板 -->
+            <div class="card full-width">
+                <h2>🔍 失敗測試追蹤 (Traces)</h2>
+                <div id="traceContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>載入中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/dashboard.js"></script>
+</body>
+</html>

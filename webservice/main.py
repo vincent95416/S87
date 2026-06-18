@@ -23,6 +23,8 @@ lock_manager = LockManager()
 latest_test_result = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+WEB_DIR = Path(__file__).resolve().parent
+STATIC_DIR = WEB_DIR / "static"
 REPORTS_DIR = BASE_DIR / "reports"
 TRACE_DIR = BASE_DIR / "traces"
 ALLURE_DIR = REPORTS_DIR / "allure-results"
@@ -41,9 +43,7 @@ app.add_middleware(
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
-    html_obj = BASE_DIR / "dashboard.html"
-    with open(html_obj, "r", encoding="utf-8") as f:
-        return f.read()
+    return (STATIC_DIR / "dashboard.html").read_text(encoding="utf-8")
 
 @app.get("/status")
 def get_status():
@@ -191,6 +191,7 @@ def get_allure_report():
 mimetypes.add_type('application/zip', '.zip')
 
 app.mount("/static", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
+app.mount("/assets", StaticFiles(directory=str(STATIC_DIR)), name="assets")
 app.mount("/traces", StaticFiles(directory=str(TRACE_DIR)), name="traces")
 app.mount("/allure", StaticFiles(directory=str(ALLURE_REPORT_HTML), html=True), name="allure" )
 

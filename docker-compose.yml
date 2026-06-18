@@ -8,7 +8,6 @@ services:
     volumes:
       - /home/ssport/test_output:/app/reports
       - /home/ssport/test_traces:/app/traces
-      - ./dashboard.html:/app/dashboard.html
       - ./webservice:/app/webservice
     command: python -m uvicorn webservice.main:app --host 0.0.0.0 --port 8000
     restart: always                # 確保 Web 服務掛了會自動重啟

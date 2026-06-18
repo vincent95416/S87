@@ -82,7 +82,7 @@ The framework supports multiple test targets with isolated Page Object Models:
    - Accepts test requests via `/api/tests/regression` endpoint
    - Runs pytest in background task using `TestRunner`
    - Auto-generates Allure HTML report after test completion
-   - Mounts static directories: `/allure/`, `/traces/`, `/static/`
+   - Mounts static directories: `/allure/`, `/traces/`, `/static/`（reports）, `/assets/`（`webservice/static/` — 前端 HTML/CSS/JS）
 
 ### API Testing Architecture
 
