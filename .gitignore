@@ -28,3 +28,4 @@ traces/
 
 # Docker secrets
 docker-compose.override.yml
+.env
