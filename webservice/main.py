@@ -31,6 +31,7 @@ ALLURE_DIR = REPORTS_DIR / "allure-results"
 ALLURE_REPORT_HTML = REPORTS_DIR / "allure-report-html"
 REPORTS_DIR.mkdir(exist_ok=True)
 ALLURE_REPORT_HTML.mkdir(exist_ok=True)
+TRACE_DIR.mkdir(exist_ok=True)
 
 app.add_middleware(
     CORSMiddleware,
