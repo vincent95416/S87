@@ -81,6 +81,102 @@
         └── test_*.zip
 ```
 
+## 設定與 Conftest 溯源地圖
+
+一支測試跑起來時，設定會從三個來源匯流：**CLI 參數**、**`pytest.ini` addopts**、**`env/*.ini`**；另外 Python 端的常數則走 **`src/config.py`**。Conftest 分成 4 層，職責各異。若一時分不清「這個 fixture / 這個常數是哪來的」，先看這一節。
+
+### 一、Conftest 分佈（共 4 支）
+
+| 檔案 | 行數 | 職責 | 何時載入 | 誰依賴誰 |
+|------|------|------|----------|----------|
+| `conftest.py`（rootdir） | 7 | **只註冊 CLI 選項**：`pytest_addoption` 加上 `--env`、`--site`、`--game` | pytest 啟動時最先掃 rootdir conftest；`pytest_addoption` 依 pytest 規範只能寫在最上層 conftest | 無依賴，是最上游 |
+| `tests/conftest.py` | 181 | **核心層**：<br>• pytest hook `test_report`（把測試結果附加到 request.node）<br>• trace fixture（`trace_handler` autouse、`trace_session_dir`）<br>• 共用 fixture：`config`、`context`、`page`、`e2e_logged_in_page`、`e2e_auth_token`、`e2e_main_page`、`api_manager` | 掃到 `tests/` 底下任一測試時載入 | 讀取 rootdir 註冊的 CLI 選項；讀取 `env/*.ini` |
+| `tests/spg/conftest.py` | 48 | **站點層覆寫**：`e2e_logged_in_page`（spg 走 API 拿 RedirectUrl，非表單登入）＋ `e2e_auth_token` | 只在 `tests/spg/` 底下的測試套用 | 依賴 `page`、`config`（由核心層提供） |
+| `tests/apicheck/conftest.py` | 8 | **測試類型層**：僅 `reset_agent_client` fixture（清掉 agent client session，讓後續 api_manager 從乾淨狀態重連） | 只在 `tests/apicheck/` 底下的測試套用 | 依賴 `api_manager`（由核心層提供） |
+
+**要點**：
+- 根目錄那份 conftest 只做 `pytest_addoption` 這一件事——這是 pytest 規範強制的位置，不能搬進 `tests/conftest.py`。
+- 「登入」這件事的入口散在三處：`tests/conftest.py`（通用邏輯 + 動態 import site LoginPage）→ `src/pages/{site}/login_page.py`（實作）→ `tests/spg/conftest.py`（覆寫特例）。
+
+### 二、設定檔分類（共 3 種）
+
+| 檔案 | 內容類型 | 讀取方式 | 主要消費者 |
+|------|----------|----------|------------|
+| `pytest.ini` | pytest 執行設定 | pytest 自動載入 | pytest CLI 本身。內含 `markers`（`e2e`、`apicheck`）與 `addopts`（預設 `-s -ra --env=uat --site=new20 --html=reports/html_report.html --self-contained-html --junitxml=reports/results.xml --alluredir=reports/allure-results --clean-alluredir`） |
+| `env/uat.ini`、`env/dev.ini` | 環境設定：`base_url`、帳密（依 site/service section 分） | `configparser` 讀入，包在 `tests/conftest.py::config` fixture 裡 | 幾乎所有 e2e / apicheck fixture 都間接依賴 |
+| `src/config.py` | Python hardcode 常數（`Config.Testdata` class） | 直接 `from src.config import Config` | 測試檔中需要「資料常數」或「共用測試帳號」的地方 |
+
+### 三、env/*.ini 的 section 結構
+
+每份 env ini 混合兩類 section，功能互不相關：
+
+**e2e 用（以「前端站點」為單位，受 `--site` 影響）**
+- `[new20]`：`base_url` / `username` / `password`
+- `[spg]`：同上
+- `env/dev.ini` 目前用 `[2.0]` 作為對應（`[DEFAULT] current_site = 2.0`），是命名歷史遺留
+
+**apicheck 用（以「後端服務」為單位，不受 `--site` 影響）**
+- `[admin]`：admin 服務的 `base_url` / `username` / `password`
+- `[agent]`：agent 服務的 `base_url` / `username` / `password`
+
+**隱含機關**：`tests/conftest.py:82` 有一行 side-effect：`config_parser['DEFAULT'] = {'site': site}`——把 `--site` 值塞進 `[DEFAULT]` section，讓下游（例如 `tests/spg/conftest.py`）能用 `config.get('DEFAULT', 'site')` 反查目前 site。乍看像多此一舉，實際上是站點 conftest 判斷「這個 fixture 該不該生效」的唯一入口。
+
+### 四、src/config.py 的內容分類
+
+`Config.Testdata` 目前混雜四類資料：
+
+1. **e2e 測試帳號（ag 站專用）**
+   - `ag_account`（代理）、`up_account`（總代理）、`transfer_member`（額轉測試帳號）
+2. **ssapi 環境 hardcode（uat 專用，跨環境即技術債，見底部技術債清單）**
+   - `ssapi_url`、`ssapi_vendor`、`ssapi_sign`、`ssapi_upaccount`
+3. **測試資料常數 / 枚舉**
+   - `ACQSITE`（來源網站列表）、`GTYPE`（賽事類型代碼）、`HIS_GTYPE`（歷史賽事類型）、`CAT_ID`（運動類別 ID）
+4. **模組 import 時計算的時間戳（有副作用）**
+   - `_now`、`ts`、`FORMATTED_TIME`、`FORMATTED_DATE`、`TOMORROW`——每次 import 都會重新計算，所以「跑一個測試 session 內 `Config.Testdata.FORMATTED_TIME` 保持不變」是實作巧合、不是保證
+
+### 五、設定流向圖（一個測試跑起來時）
+
+```
+pytest CLI                                    src/config.py
+    │                                              │
+    │ --env=uat --site=new20                       │ 純 hardcode 常數
+    ↓                                              │ 測試檔直接 import
+conftest.py::pytest_addoption                      │ (Config.Testdata.xxx)
+    │                                              │
+    │ pytest 解析 & 合併                            │
+    ↓                                              │
+pytest.ini::addopts (補上預設值)                    │
+    │                                              │
+    ↓                                              │
+tests/conftest.py::config fixture                  │
+    │ configparser.read(env/{env}.ini)             │
+    │ config_parser['DEFAULT'] = {'site': site}    │
+    ↓                                              │
+下游 fixture:                                       │
+  • api_manager       ── 讀 [admin]、[agent]       │
+  • e2e_logged_in_page ── site 決定 import 誰      │
+  • e2e_auth_token                                  │
+    │                                              │
+    ↓                                              ↓
+                    測試 function
+       (fixture 注入 + Config.Testdata 常數)
+```
+
+### 六、常見「這個東西哪來的？」對照表
+
+| 你看到 | 它其實是 | 定義在 |
+|--------|----------|--------|
+| `def test_x(config)` 參數 | ConfigParser 物件（環境設定） | `tests/conftest.py:63` |
+| `from src.config import Config` | Python hardcode 常數 class | `src/config.py:4` |
+| `config.get('DEFAULT', 'site')` | 從 `--site` CLI 反查目前站點 | `tests/conftest.py:82` 手動塞進 `[DEFAULT]` |
+| `config.get('new20', 'base_url')` | env/{env}.ini 的 `[new20]` section | `env/uat.ini`、`env/dev.ini` |
+| `config.get('admin', 'base_url')` | env/{env}.ini 的 `[admin]` section | 同上 |
+| `--env`、`--site`、`--game` | pytest CLI 選項 | `conftest.py`（rootdir） |
+| `-m e2e` / `-m apicheck` | pytest marker | `pytest.ini` |
+| `--html=... --alluredir=...` 預設值 | pytest addopts | `pytest.ini` |
+| `Config.Testdata.ACQSITE` | 純資料常數 | `src/config.py:17` |
+| `Config.Testdata.ssapi_*` | uat 環境 hardcode（技術債） | `src/config.py:12-15` |
+
 ## Fixture 架構
 
 ### Fixture 繼承關係

@@ -2,7 +2,7 @@ services:
   # 角色一：長期運行的控制台 (Web)
   webservice:
     build: .
-    image: test-image:latest  # 給這個鏡像一個統一的名字
+    image: test-image:latest
     ports:
       - "${WEB_PORT:-8000}:8000"
     volumes:
@@ -12,10 +12,10 @@ services:
 
   # 角色二：臨時的測試任務 (Tester)
   tester:
-    image: test-image:latest  # 直接用上面 build 好的，不用重新 build
+    image: test-image:latest
     volumes:
       - ${REPORTS_DIR:-./reports}:/app/reports     # 寫入同一個抽屜
     # 這裡放你原本跑測試的完整指令
-    command: pytest -m apicheck --html=reports/cicd_report.html --self-contained-html
+    command: pytest -m apicheck --color=no
     profiles:
       - "task"                     # 標記為任務模式，平時 docker-compose up 不會誤觸它
