@@ -18,6 +18,6 @@ services:
     environment:
       WEBHOOK_URL: ${GCHAT_WEBHOOK_URL:-}    # 空值等於停用通知
     # 用 notify.py 包住 pytest，結束時發 Google Chat 通知
-    command: python scripts/notify.py -m apicheck --color=no
+    command: python scripts/notify.py -m apicheck --color=no --html=reports/cicd_report.html
     profiles:
       - "task"                     # 標記為任務模式，平時 docker-compose up 不會誤觸它
