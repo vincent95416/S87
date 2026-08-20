@@ -15,7 +15,9 @@ services:
     image: test-image:latest
     volumes:
       - ${REPORTS_DIR:-./reports}:/app/reports     # 寫入同一個抽屜
-    # 這裡放你原本跑測試的完整指令
-    command: pytest -m apicheck --color=no
+    environment:
+      WEBHOOK_URL: ${GCHAT_WEBHOOK_URL:-}    # 空值等於停用通知
+    # 用 notify.py 包住 pytest，結束時發 Google Chat 通知
+    command: python scripts/notify.py -m apicheck --color=no
     profiles:
       - "task"                     # 標記為任務模式，平時 docker-compose up 不會誤觸它
