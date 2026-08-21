@@ -66,7 +66,7 @@ def parse_junit(path: Path):
     }
 
 
-def resolve_env_site(cli_args):
+def resolve_env(cli_args):
     """CLI 參數優先，其次讀 pytest.ini 的 addopts 當 fallback。"""
     ini_args = []
     try:
@@ -76,16 +76,14 @@ def resolve_env_site(cli_args):
     except (configparser.Error, OSError, UnicodeDecodeError):
         pass
 
-    env = site = None
+    env = None
     for token in ini_args + list(cli_args):
         if token.startswith("--env="):
             env = token.split("=", 1)[1]
-        elif token.startswith("--site="):
-            site = token.split("=", 1)[1]
-    return env, site
+    return env
 
 
-def build_payload(stats, exit_code, env, site):
+def build_payload(stats, exit_code, env):
     if stats is None:
         title = "⚠️ 測試執行完成（找不到 JUnit 報告）"
         summary = f"pytest exit code: {exit_code}"
@@ -110,8 +108,6 @@ def build_payload(stats, exit_code, env, site):
     tags = []
     if env:
         tags.append(f"env=<b>{env}</b>")
-    if site:
-        tags.append(f"site=<b>{site}</b>")
     if tags:
         widgets.append({"textParagraph": {"text": "　".join(tags)}})
 
@@ -164,9 +160,9 @@ def main():
 
     if dry_run:
         stats = parse_junit(JUNIT_PATH)
-        env, site = resolve_env_site(pytest_args)
+        env = resolve_env(pytest_args)
         exit_code = 1 if (stats and stats["failed"] > 0) else 0
-        payload = build_payload(stats, exit_code, env, site)
+        payload = build_payload(stats, exit_code, env)
         sys.stdout.buffer.write(
             json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
         )
@@ -174,8 +170,8 @@ def main():
 
     exit_code = subprocess.call(["pytest", *pytest_args])
     stats = parse_junit(JUNIT_PATH)
-    env, site = resolve_env_site(pytest_args)
-    send_message(build_payload(stats, exit_code, env, site))
+    env = resolve_env(pytest_args)
+    send_message(build_payload(stats, exit_code, env))
     sys.exit(exit_code)
 
 
