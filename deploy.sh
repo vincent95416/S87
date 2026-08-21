@@ -10,6 +10,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+if [ ! -f "src/services/add_member_payload.json" ]; then
+  echo "ERROR: 缺少 add_member_payload.json"
+  exit 1
+fi
+
 echo "==> [1/3] Building image..."
 sudo docker compose build webservice
 
