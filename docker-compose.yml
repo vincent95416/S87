@@ -17,6 +17,7 @@ services:
       - ${REPORTS_DIR:-./reports}:/app/reports     # 寫入同一個抽屜
     environment:
       WEBHOOK_URL: ${GCHAT_WEBHOOK_URL:-}    # 空值等於停用通知
+      REPORT_BASE_URL: ${REPORT_BASE_URL:-}  # 空值等於訊息不附報告連結
     # 用 notify.py 包住 pytest，結束時發 Google Chat 通知
     command: python scripts/notify.py -m apicheck --color=no --html=reports/cicd_report.html
     profiles:

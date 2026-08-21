@@ -10,6 +10,9 @@
 環境變數：
     WEBHOOK_URL      Google Chat incoming webhook URL；未設定則跳過發送
     JUNIT_XML_PATH   JUnit XML 路徑，預設 reports/results.xml
+    REPORT_BASE_URL  webservice 的對外網址（如 http://host:8000）；
+                     設定後訊息會加上「查看完整報告」按鈕，連到
+                     ${REPORT_BASE_URL}/static/cicd_report.html
 """
 import configparser
 import json
@@ -23,6 +26,7 @@ from pathlib import Path
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 JUNIT_PATH = Path(os.environ.get("JUNIT_XML_PATH", "reports/results.xml"))
+REPORT_BASE_URL = os.environ.get("REPORT_BASE_URL", "").strip().rstrip("/")
 
 
 def parse_junit(path: Path):
@@ -103,7 +107,17 @@ def build_payload(stats, exit_code, env):
         if not ok and exit_code not in (0, 1):
             summary += f"\npytest exit code: {exit_code}"
 
-    widgets = [{"textParagraph": {"text": summary}}]
+    widgets = []
+    if REPORT_BASE_URL:
+        widgets.append({
+            "buttonList": {
+                "buttons": [{
+                    "text": "查看完整報告",
+                    "onClick": {"openLink": {"url": f"{REPORT_BASE_URL}/static/cicd_report.html"}},
+                }]
+            }
+        })
+    widgets.append({"textParagraph": {"text": summary}})
 
     tags = []
     if env:
