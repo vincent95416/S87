@@ -98,11 +98,13 @@ def build_payload(stats, exit_code, env):
         ok = stats["failed"] == 0 and exit_code == 0
         icon = "✅" if ok else "❌"
         title = f"{icon} 測試{'通過' if ok else '失敗'}"
+        d = stats["duration"]
+        dur = f"{int(d // 60)}m {int(d % 60)}s" if d >= 60 else f"{d:.1f}s"
         summary = (
             f"✅ {stats['passed']} passed　"
             f"❌ {stats['failed']} failed　"
             f"⚠️ {stats['skipped']} skipped　"
-            f"(total {stats['total']})"
+            f"(total {stats['total']}, 耗時 {dur})"
         )
         if not ok and exit_code not in (0, 1):
             summary += f"\npytest exit code: {exit_code}"
