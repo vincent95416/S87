@@ -32,7 +32,10 @@ REPORT_BASE_URL = os.environ.get("REPORT_BASE_URL", "").strip().rstrip("/")
 def parse_junit(path: Path):
     if not path.exists():
         return None
-    root = ET.parse(path).getroot()
+    try:
+        root = ET.parse(path).getroot()
+    except ET.ParseError as exc:
+        return {"parse_error": str(exc)}
     suites = root.findall("testsuite") if root.tag == "testsuites" else [root]
 
     total = failed = errors = skipped = 0
@@ -89,8 +92,11 @@ def resolve_env(cli_args):
 
 def build_payload(stats, exit_code, env):
     if stats is None:
-        title = "⚠️ 測試執行完成（找不到 JUnit 報告）"
+        title = "⚠️ 找不到 JUnit 報告"
         summary = f"pytest exit code: {exit_code}"
+    elif stats.get("parse_error"):
+        title = "⚠️ JUnit XML 解析失敗"
+        summary = f"{stats['parse_error']}\npytest exit code: {exit_code}"
     elif stats["total"] == 0:
         title = "⚠️ 未執行到任何測試"
         summary = f"沒有 test case 被收集到（pytest exit code: {exit_code}）"
@@ -127,7 +133,7 @@ def build_payload(stats, exit_code, env):
     if tags:
         widgets.append({"textParagraph": {"text": "　".join(tags)}})
 
-    if stats and stats["failed_cases"]:
+    if stats and stats.get("failed_cases"):
         shown = stats["failed_cases"][:10]
         body = "\n".join(f"• {case['classname']}::{case['name']} — {case['message'] or '(無錯誤訊息)'}" for case in shown)
         remaining = len(stats["failed_cases"]) - len(shown)
@@ -165,6 +171,9 @@ def send_message(payload):
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             resp.read()
+    except urllib.error.HTTPError as exc:
+        body = exc.read()[:500].decode("utf-8", errors="replace")
+        print(f"[notify] webhook 拒收 (HTTP {exc.code}): {body}", file=sys.stderr)
     except urllib.error.URLError as exc:
         print(f"[notify] webhook 發送失敗: {exc}", file=sys.stderr)
 
@@ -177,7 +186,7 @@ def main():
     if dry_run:
         stats = parse_junit(JUNIT_PATH)
         env = resolve_env(pytest_args)
-        exit_code = 1 if (stats and stats["failed"] > 0) else 0
+        exit_code = 1 if (stats and stats.get("failed", 0) > 0) else 0
         payload = build_payload(stats, exit_code, env)
         sys.stdout.buffer.write(
             json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8") + b"\n"
