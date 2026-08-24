@@ -20,6 +20,47 @@ def test_report(item, call):
     rep = outcome.get_result()      #把item.rep_call測試本體的結果附加到request.node上，讓fixture讀取
     setattr(item, f"rep_{rep.when}", rep)
 
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """
+    測試失敗時，把 API 呼叫資訊塞進 user_properties（會寫進 JUnit XML）。
+    給 notify.py 的訊息卡片用來顯示「哪支 endpoint 掛了」。
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if not report.failed:
+        return
+    info = _extract_api_call_info(call)
+    if info:
+        item.user_properties.append(("api_call", info))
+
+
+def _extract_api_call_info(call):
+    """三層 fallback 找失敗當下的 request/response 資訊。"""
+    excinfo = call.excinfo
+    if excinfo is None:
+        return None
+    # Layer 1: traceback 任一 frame 的 local 有 response 物件（HTTP status/內容 assert fail）
+    tb = excinfo.tb
+    while tb is not None:
+        response = tb.tb_frame.f_locals.get("response")
+        if response is not None and hasattr(response, "status_code"):
+            req = getattr(response, "request", None)
+            method = getattr(req, "method", "?")
+            url = getattr(response, "url", "?")
+            return f"{method} {url} → {response.status_code}"
+        tb = tb.tb_next
+    # Layer 2: requests 例外（ConnectionError / Timeout / SSLError）帶 .request
+    exc_value = excinfo.value
+    req = getattr(exc_value, "request", None)
+    if req is not None:
+        method = getattr(req, "method", "?")
+        url = getattr(req, "url", "?")
+        return f"{method} {url} → {type(exc_value).__name__}"
+    # Layer 3: 讓 notify.py fallback 用 classname::name + message 顯示
+    return None
+
 @pytest.fixture(scope="function", autouse=True)
 def trace_handler(request, trace_session_dir):
     """

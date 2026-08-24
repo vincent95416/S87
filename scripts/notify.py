@@ -57,10 +57,18 @@ def parse_junit(path: Path):
                     name = case.get("name", "")
                     message = (node.get("message", "") or (node.text or "")).strip()
                     message = " ".join(message.split())
+                    props = {}
+                    props_node = case.find("properties")
+                    if props_node is not None:
+                        for prop in props_node.findall("property"):
+                            pname = prop.get("name", "")
+                            if pname:
+                                props[pname] = prop.get("value", "")
                     failed_cases.append({
                         "classname": classname,
                         "name": name,
-                        "message": message[:200]
+                        "message": message[:200],
+                        "api_call": props.get("api_call"),
                     })
 
     return {
@@ -115,36 +123,35 @@ def build_payload(stats, exit_code, env):
         if not ok and exit_code not in (0, 1):
             summary += f"\npytest exit code: {exit_code}"
 
-    widgets = []
-    if REPORT_BASE_URL:
-        widgets.append({
-            "buttonList": {
-                "buttons": [{
-                    "text": "查看完整報告",
-                    "onClick": {"openLink": {"url": f"{REPORT_BASE_URL}/static/cicd_report.html"}},
-                }]
-            }
-        })
-    widgets.append({"textParagraph": {"text": summary}})
-
-    tags = []
+    main_widgets = [{"textParagraph": {"text": summary}}]
     if env:
-        tags.append(f"env=<b>{env}</b>")
-    if tags:
-        widgets.append({"textParagraph": {"text": "　".join(tags)}})
+        main_widgets.append({"textParagraph": {"text": f"env=<b>{env}</b>"}})
+    if REPORT_BASE_URL:
+        url = f"{REPORT_BASE_URL}/static/cicd_report.html"
+        main_widgets.append({
+            "textParagraph": {"text": f"📊 完整報告（請直接複製網址到瀏覽器）：<br>{url}"}
+        })
+
+    sections = [{"widgets": main_widgets}]
 
     if stats and stats.get("failed_cases"):
+        total_failed = len(stats["failed_cases"])
         shown = stats["failed_cases"][:10]
-        body = "\n".join(f"• {case['classname']}::{case['name']} — {case['message'] or '(無錯誤訊息)'}" for case in shown)
-        remaining = len(stats["failed_cases"]) - len(shown)
+        lines = []
+        for i, case in enumerate(shown, 1):
+            if case.get("api_call"):
+                lines.append(f"{i}. {case['api_call']}")
+            else:
+                msg = case.get("message") or "(無錯誤訊息)"
+                lines.append(f"{i}. {case['classname']}::{case['name']} — {msg[:100]}")
+        remaining = total_failed - len(shown)
         if remaining > 0:
-            body += f"\n…及其餘 {remaining} 個"
-        widgets.append({
-            "decoratedText": {
-                "topLabel": "失敗清單",
-                "text": body,
-                "wrapText": True,
-            }
+            lines.append(f"…及其餘 {remaining} 個")
+        sections.append({
+            "header": f"失敗清單（{total_failed} 個）",
+            "collapsible": True,
+            "uncollapsibleWidgetsCount": 0,
+            "widgets": [{"textParagraph": {"text": "<br>".join(lines)}}],
         })
 
     return {
@@ -152,7 +159,7 @@ def build_payload(stats, exit_code, env):
             "cardId": "tester-result",
             "card": {
                 "header": {"title": title},
-                "sections": [{"widgets": widgets}],
+                "sections": sections,
             },
         }]
     }
