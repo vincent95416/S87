@@ -23,6 +23,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from urllib.parse import urlparse
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 JUNIT_PATH = Path(os.environ.get("JUNIT_XML_PATH", "reports/results.xml"))
@@ -98,6 +99,21 @@ def resolve_env(cli_args):
     return env
 
 
+def _shorten_api_call(api_call):
+    """把 'METHOD https://host/path?q=1 → 500' 縮成 'METHOD /path?q=1 → 500'。"""
+    parts = api_call.split(" ", 2)
+    if len(parts) < 3:
+        return api_call
+    method, url, rest = parts
+    parsed = urlparse(url)
+    if not parsed.scheme:
+        return api_call
+    path = parsed.path or "/"
+    if parsed.query:
+        path += "?" + parsed.query
+    return f"{method} {path} {rest}"
+
+
 def build_payload(stats, exit_code, env):
     if stats is None:
         title = "⚠️ 找不到 JUnit 報告"
@@ -140,7 +156,7 @@ def build_payload(stats, exit_code, env):
         lines = []
         for i, case in enumerate(shown, 1):
             if case.get("api_call"):
-                lines.append(f"{i}. {case['api_call']}")
+                lines.append(f"{i}. {case['name']} — {_shorten_api_call(case['api_call'])}")
             else:
                 msg = case.get("message") or "(無錯誤訊息)"
                 lines.append(f"{i}. {case['classname']}::{case['name']} — {msg[:100]}")
