@@ -113,12 +113,14 @@ def test_locker_list(api_manager, member_id, level, locker_type):
     response = api_manager.admin.query_locker(member_id, level)
     assert response.json()["Data"][0]["MemType"] == locker_type
 
+@pytest.mark.apicheck
 def test_locker_setting(api_manager):
     res_locker = api_manager.admin.query_locker_type()
     res_danger = api_manager.admin.query_danger_type()
     assert res_locker.status_code == 200
     assert res_danger.status_code == 200
 
+@pytest.mark.apicheck
 def test_system_config(api_manager):
     response = api_manager.admin.query_system_config()
     assert response.status_code == 200

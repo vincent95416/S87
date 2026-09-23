@@ -77,9 +77,6 @@ class AdminService(BaseService):
         }
         return self.client.post(url, json=payload)
 
-    def settle_game(self):
-        pass
-
     def event_open(self, event_id):
         url = f"{self.endpoint}/api/BallEn/evtOpen"
         payload = {"CatID":1,"GameType":0,"EvtID":event_id}

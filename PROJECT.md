@@ -123,15 +123,18 @@
 
 ### 四、src/config.py 的內容分類
 
-`Config.Testdata` 目前混雜四類資料：
+`Config.Testdata` 目前混雜五類資料：
 
 1. **e2e 測試帳號（ag 站專用）**
    - `ag_account`（代理）、`up_account`（總代理）、`transfer_member`（額轉測試帳號）
 2. **ssapi 環境 hardcode（uat 專用，跨環境即技術債，見底部技術債清單）**
    - `ssapi_url`、`ssapi_vendor`、`ssapi_sign`、`ssapi_upaccount`
 3. **測試資料常數 / 枚舉**
-   - `ACQSITE`（來源網站列表）、`GTYPE`（賽事類型代碼）、`HIS_GTYPE`（歷史賽事類型）、`CAT_ID`（運動類別 ID）
-4. **模組 import 時計算的時間戳（有副作用）**
+   - `SITE`（來源網站列表）、`GTYPE`（賽事類型代碼）、`HIS_GTYPE`（歷史賽事類型）、`CAT_ID`（運動類別 ID）、`LEAGUE_LEVEL`（聯賽層級 1–10）
+4. **會員鎖測試三元組（`LOCKER` / `LOCKER_LEVEL` / `LOCKER_TYPE`）**
+   - 三個 list **不是**笛卡爾積，而是**以 index 逐一對應**（`test_locker_list` 用 `zip` 展開）：`LOCKER[i]` 這個帳號的層級是 `LOCKER_LEVEL[i]`、預期會員類型代號是 `LOCKER_TYPE[i]`
+   - **⚠ 陷阱**：三者長度必須相同，且順序必須嚴格對齊。新增測試帳號時要**三個 list 同時各補一筆**——只補 `LOCKER` 會讓後兩筆錯位或靜默漏測（`zip` 會截短到最短的 list）
+5. **模組 import 時計算的時間戳（有副作用）**
    - `_now`、`ts`、`FORMATTED_TIME`、`FORMATTED_DATE`、`TOMORROW`——每次 import 都會重新計算，所以「跑一個測試 session 內 `Config.Testdata.FORMATTED_TIME` 保持不變」是實作巧合、不是保證
 
 ### 五、設定流向圖（一個測試跑起來時）
@@ -174,7 +177,8 @@ tests/conftest.py::config fixture                  │
 | `--env`、`--site`、`--game` | pytest CLI 選項 | `conftest.py`（rootdir） |
 | `-m e2e` / `-m apicheck` | pytest marker | `pytest.ini` |
 | `--html=... --alluredir=...` 預設值 | pytest addopts | `pytest.ini` |
-| `Config.Testdata.ACQSITE` | 純資料常數 | `src/config.py:17` |
+| `Config.Testdata.SITE` | 純資料常數（來源網站列表） | `src/config.py:16` |
+| `Config.Testdata.LOCKER` / `LOCKER_LEVEL` / `LOCKER_TYPE` | 會員鎖測試三元組（zip 逐一配對，非 product） | `src/config.py:31-33` |
 | `Config.Testdata.ssapi_*` | uat 環境 hardcode（技術債） | `src/config.py:12-15` |
 
 ## Fixture 架構
@@ -576,4 +580,4 @@ A: 那個 env 的 ini 檔還沒填 `[admin]` / `[agent]` section 的內容。補
 ---
 
 **維護者**: V
-**更新日期**: 2026-06-15
+**更新日期**: 2026-09-23
