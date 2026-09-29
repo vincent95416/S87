@@ -78,6 +78,36 @@ class AgentAuthStrategy(AuthStrategy):
         except ValueError:
             raise Exception(f"Agent 登入回應格式異常: {response.text}")
 
+class PlayerAuthStrategy(AuthStrategy):
+    def login_url(self, base_url):
+        return f"{base_url}/api/mb/sin/login"
+
+    def authenticate(self, session, base_url, credentials):
+        payload = {
+            "mbID": credentials.get("username"),
+            "pw": credentials.get("password"),
+        }
+        response = session.post(self.login_url(base_url), json=payload, verify=False)
+
+        if response.status_code != 200:
+            raise Exception(f"Player 登入失敗 [status={response.status_code}]: {response.text or '(無回應內容)'}")
+
+        try:
+            data = response.json()
+        except ValueError:
+            raise Exception(f"Player 登入回應非 JSON: {response.text}")
+
+        token = data.get("data").get("loginID")
+        if not token:
+            raise Exception(f"Player 登入回應找不到 Token 欄位: {data}")
+
+        session.headers.update({
+            "Ssslang": "tw",
+            "Sssmbid": credentials.get("username"),
+            "Ssstoken": token,
+        })
+        return True
+
 class APIClient:
     def __init__(self, base_url, auth_strategy: AuthStrategy, credentials: dict):
         """

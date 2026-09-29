@@ -9,10 +9,6 @@ from pathlib import Path
 
 class AgentService(BaseService):
     auth_strategy_class = AgentAuthStrategy
-    def __init__(self, client, base_url):
-        super().__init__(client, base_url)
-        self.endpoint = f"{base_url}"
-
     def login_flow(self, username, password):
         session = requests.Session()    #獨立session
         session.headers.update({
@@ -20,7 +16,7 @@ class AgentService(BaseService):
             "X-Requested-With": "XMLHttpRequest"
         })
 
-        login_url = f"{self.endpoint}/Home/Login"
+        login_url = f"{self.base_url}/Home/Login"
         response_get = session.get(login_url, verify=False)
 
         if response_get.status_code != 200:
@@ -38,16 +34,16 @@ class AgentService(BaseService):
             "txtac": username,
             "txtpd": password
         }
-        auth_url = f"{self.endpoint}/Home/Authenticate"
+        auth_url = f"{self.base_url}/Home/Authenticate"
         return session.post(auth_url, data=payload, verify=False)
 
     def add_cash(self, cash: int):
-        url = f"{self.endpoint}/Mem/addCash"
+        url = f"{self.base_url}/Mem/addCash"
         payload = {"pmid": Config.Testdata.ag_account, "mid": Config.Testdata.transfer_member, "cash": cash}
         return self.client.post(url, data=payload)
 
     def disable(self, agent_id):
-        url = f"{self.endpoint}/Mem/disable"
+        url = f"{self.base_url}/Mem/disable"
         payload = {
             "mid": agent_id,
             "value": -1
@@ -59,7 +55,7 @@ class AgentService(BaseService):
             raise Exception("啟用/禁用失敗，請手動重現")
 
     def add_subadmin(self):
-        url = f"{self.endpoint}/Mem/subAdd"
+        url = f"{self.base_url}/Mem/subAdd"
         payload = {
             "pmid": Config.Testdata.up_account,
             "mid": Config.Testdata.ts,
@@ -77,7 +73,7 @@ class AgentService(BaseService):
             raise Exception("子帳號建立失敗，請手動重現")
 
     def del_subadmin(self):
-        url = f"{self.endpoint}/Mem/del"
+        url = f"{self.base_url}/Mem/del"
         payload = {
             "mid": Config.Testdata.ts
         }
@@ -88,13 +84,13 @@ class AgentService(BaseService):
             raise Exception("子帳號刪除失敗，請手動重現")
 
     def query_member(self, member_id):
-        url = f"{self.endpoint}/Mem/QueryMem"
+        url = f"{self.base_url}/Mem/QueryMem"
         payload = {"mid": member_id}
         response = self.client.post(url, data=payload)
         return response.json()
 
     def add_member(self):
-        url = f"{self.endpoint}/Mem/SaveMemID2"
+        url = f"{self.base_url}/Mem/SaveMemID2"
         payload_path = Path(__file__).parent / "add_member_payload.json"
         with payload_path.open(encoding="utf-8") as f:
             data = json.load(f)
@@ -108,12 +104,12 @@ class AgentService(BaseService):
             raise Exception("建立失敗，請手動重現")
 
     def del_member(self, mid):
-        url = f"{self.endpoint}/Mem/del"
+        url = f"{self.base_url}/Mem/del"
         payload = {"mid": mid}
         return  self.client.post(url, data=payload)
 
     def query_level_data(self):
-        url = f"{self.endpoint}/Mem/LevelDataQuery"
+        url = f"{self.base_url}/Mem/LevelDataQuery"
         columns = [
             "MemID", "MemName", "ChildCount", "DirectCount", "Level0Count",
             "DepositType", "CreditLimitSport", "CreditUsedSport", "DelayType",
@@ -139,15 +135,15 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def query_game(self):
-        url = f"{self.endpoint}/Ball/query"
+        url = f"{self.base_url}/Ball/query"
         return self.client.post(url)
 
     def query_bill(self):
-        url = f"{self.endpoint}/bill/billQ"
+        url = f"{self.base_url}/bill/billQ"
         return self.client.post(url)
 
     def query_billType(self):
-        url = f"{self.endpoint}/bill/billTypeQ"
+        url = f"{self.base_url}/bill/billTypeQ"
         payload = {
           "ticketTime": "acctime",
           "ballType": "-1",
@@ -160,7 +156,7 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def query_billGame(self):
-        url = f"{self.endpoint}/bill/billGameQ"
+        url = f"{self.base_url}/bill/billGameQ"
         payload = {
           "ticketTime": "acctime",
           "ballType": "-1",
@@ -174,7 +170,7 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def query_billAlert(self):
-        url = f"{self.endpoint}/bill/billAlertQ"
+        url = f"{self.base_url}/bill/billAlertQ"
         payload = {
           "ticketTime": "acctime",
           "ballType": "-1",
@@ -188,7 +184,7 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def query_billCancel(self):
-        url = f"{self.endpoint}/bill/billCancelQ"
+        url = f"{self.base_url}/bill/billCancelQ"
         payload = {
           "ticketTime": "acctime",
           "ballType": "-1",
@@ -202,7 +198,7 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def query_billPending(self):
-        url = f"{self.endpoint}/bill/billPendingQ"
+        url = f"{self.base_url}/bill/billPendingQ"
         payload = {
           "ticketTime": "acctime",
           "ballType": "-1",
@@ -216,7 +212,7 @@ class AgentService(BaseService):
         return self.client.post(url, data=payload)
 
     def kickout_member(self, member_id):
-        url = f"{self.endpoint}/Mem/kickMem"
+        url = f"{self.base_url}/Mem/kickMem"
         payload = {"mid": member_id}
         return self.client.post(url, data=payload)
 

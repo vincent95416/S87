@@ -1,16 +1,18 @@
 from src.apicheck.api_client import APIClient
 from src.services.admin import AdminService
 from src.services.agent import AgentService
+from src.services.player import PlayerService
 
 class APIManager:
     """
     每個 service 從 config 對應 section 各自讀 base_url 和帳密。
-    section 名稱即 service 名稱（admin、agent）。
+    section 名稱即 service 名稱（admin、agent、player）。
     """
     def __init__(self, config):
         self.config = config
         self._admin = None
         self._agent = None
+        self._player = None
 
     def _build_service(self, service_class, section):
         if service_class.auth_strategy_class is None:
@@ -36,6 +38,12 @@ class APIManager:
         if self._agent is None:
             self._agent = self._build_service(AgentService, "agent")
         return self._agent
+
+    @property
+    def player(self):
+        if self._player is None:
+            self._player = self._build_service(PlayerService, "player")
+        return self._player
 
     def reset_agent_client(self):
         self._agent = None
